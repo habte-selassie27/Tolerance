@@ -27,7 +27,7 @@
     "proof:judge-v2": "pnpm build:genlayer-worker && node --conditions=react-server .worker-build/scripts/create-judge-v2-synthetic-proof.js",
     "test:integration:phase3b1b": "node scripts/run-suite.mjs persistence",
     "test:integration:phase3b2b-openai": "node scripts/run-suite.mjs openai-evaluation",
-    "test:integration:phase3b2c-direct": "node scripts/run-phase3b2c-direct.mjs",
+    "test:integration:phase3b2c-direct": "node scripts/run-suite.mjs phase3b2c-golden",
     "test:integration:phase3c1": "node scripts/run-suite.mjs persistence",
     "test:integration:phase3c2": "node scripts/run-suite.mjs persistence",
     "test:integration:phase3c2-live": "node scripts/run-suite.mjs phase3c2-live",

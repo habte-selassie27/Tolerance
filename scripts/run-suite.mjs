@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 
@@ -75,6 +76,21 @@ const SUITES = {
     },
     vitest: [],
   },
+  "phase3b2c-golden": {
+    description:
+      "Golden dispute-packet vectors cross-checked against the Python reference.",
+    required: [],
+    files: ["tests/integration/phase3b2c-golden.integration.test.ts"],
+    env: {
+      RUN_PHASE3_INTEGRATION_TESTS: "1",
+      UPDATE_PHASE3B2C_GOLDENS: process.env.UPDATE_PHASE3B2C_GOLDENS ?? "0",
+    },
+    vitest: [],
+    python: {
+      cwd: "../genlayer",
+      pytest: ["tests/direct/test_phase3b2c_application_packets.py", "-v"],
+    },
+  },
   "rc5-evidence-authority": {
     description: "Evidence authority boundary with a real database.",
     required: ["DATABASE_URL", "DIRECT_URL", "SUPABASE_SERVICE_ROLE_KEY"],
@@ -100,6 +116,31 @@ const SUITES = {
     ],
   },
 };
+
+/**
+ * A venv lays its interpreter out differently per platform, so probe both
+ * layouts rather than assuming one.
+ */
+function resolvePython() {
+  const candidate = ["Scripts/python.exe", "bin/python3", "bin/python"]
+    .map((relative) =>
+      fileURLToPath(new URL(`../.venv-genlayer/${relative}`, import.meta.url)),
+    )
+    .find((path) => existsSync(path));
+  if (!candidate) {
+    throw new Error("This suite requires .venv-genlayer with Python 3.12.");
+  }
+  const preflight = spawnSync(
+    candidate,
+    [
+      "-c",
+      "import sys; assert sys.version_info[:2] == (3, 12), f'Python 3.12 required, got {sys.version.split()[0]}'",
+    ],
+    { stdio: "inherit" },
+  );
+  if (preflight.status !== 0) process.exit(preflight.status ?? 1);
+  return candidate;
+}
 
 const usage = () =>
   Object.entries(SUITES)
@@ -143,4 +184,16 @@ const child = spawn(
   },
 );
 
-child.once("exit", (code) => process.exit(code ?? 1));
+child.once("exit", (code) => {
+  if (code) process.exit(code);
+  if (!suite.python) process.exit(0);
+  const direct = spawnSync(
+    resolvePython(),
+    ["-m", "pytest", ...suite.python.pytest],
+    {
+      cwd: fileURLToPath(new URL(suite.python.cwd, import.meta.url)),
+      stdio: "inherit",
+    },
+  );
+  process.exit(direct.status ?? 1);
+});

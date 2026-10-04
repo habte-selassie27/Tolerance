@@ -1,8 +1,2 @@
 lib/
-dist/
-out/
-cache/
-coverage/
-node_modules/
-genlayer/artifacts/
 pnpm-lock.yaml
