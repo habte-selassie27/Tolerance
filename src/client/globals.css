@@ -677,6 +677,41 @@ select:focus {
   padding-top: 20px;
   border-top: 1px solid var(--tm-border);
 }
+.auth-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--tm-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--tm-border);
+}
+.auth-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 0;
+}
+.auth-option-mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
 .form-message {
   margin: 0;
   border-left: 3px solid var(--tm-danger);

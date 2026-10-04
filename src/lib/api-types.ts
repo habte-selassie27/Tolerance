@@ -40,6 +40,9 @@ export type PasswordRecoveryResponse = { ok: boolean; message: string };
 
 export type SignOutResponse = { ok: boolean; redirectTo: string };
 
+/** A provider handshake the browser should follow. */
+export type OAuthStartResponse = { ok: boolean; url: string };
+
 /* -------------------------------------------------------------------------- */
 /* Workspace shell and summary                                                */
 /* -------------------------------------------------------------------------- */

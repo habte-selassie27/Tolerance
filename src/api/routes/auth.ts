@@ -4,6 +4,7 @@ import { Router } from "express";
 import { validateSignupInput, validNewPassword } from "../../lib/auth-input";
 import { createServerSupabaseClient } from "../../lib/supabase";
 import { appOrigin, safeNextPath } from "../app";
+import { ApiError } from "../errors";
 
 export const authRouter: Router = Router();
 
@@ -131,6 +132,42 @@ authRouter.post("/auth/sign-out", async (_request, response) => {
   const supabase = createServerSupabaseClient();
   await supabase.auth.signOut();
   response.json({ ok: true, redirectTo: "/login" });
+});
+
+/**
+ * Starts an OAuth handshake. The provider URL is built on the server so the
+ * PKCE verifier and nonce land in the same cookie jar that `/auth/callback`
+ * reads back; the browser only follows the returned URL.
+ */
+authRouter.post("/auth/oauth", async (request, response) => {
+  const provider = field(request.body, "provider");
+  if (provider !== "google") {
+    throw new ApiError(
+      400,
+      "That sign-in provider is not enabled.",
+      "UNSUPPORTED_PROVIDER",
+    );
+  }
+  const next = safeNextPath(field(request.body, "next"), "/app");
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+  if (error || !data.url) {
+    console.warn("termsmet.auth.oauth_unavailable", {
+      provider,
+      code: error?.code ?? "NO_URL",
+    });
+    throw new ApiError(
+      503,
+      "Google sign-in is unavailable right now. Use your email and password.",
+      "PROVIDER_UNAVAILABLE",
+    );
+  }
+  response.json({ ok: true, url: data.url });
 });
 
 authRouter.get("/auth/callback", async (request, response) => {

@@ -4,6 +4,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import { Brand } from "../components/primitives";
 import { AuthShell } from "../components/auth";
+import { SignInOptions } from "../components/sign-in-options";
 import { formString, jsonBody, submit } from "../lib/api";
 
 export type AuthFormState = { ok?: boolean; message?: string };
@@ -150,6 +151,7 @@ export function LoginRoute() {
           Access your authorized manufacturing dossiers and payment workflows.
         </p>
         <AuthForm mode="login" next={next} />
+        <SignInOptions next={next} />
         <Link className="text-link" to="/forgot-password">
           Forgot password?
         </Link>
