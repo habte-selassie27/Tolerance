@@ -24,7 +24,7 @@ const submitLabel = {
  * raise it from there.
  */
 function passwordStrength(value: string) {
-  if (!value) return { score: 0, label: "" };
+  if (!value) return { score: 0, label: "Strength" };
   const meetsMinimum =
     value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
   if (!meetsMinimum) return { score: 1, label: "Weak" };
@@ -145,6 +145,11 @@ export function AuthForm({
           )}
         </div>
       )}
+      {mode === "login" && (
+        <Link className="text-link auth-forgot" to="/forgot-password">
+          Forgot password?
+        </Link>
+      )}
       {signup && (
         <label htmlFor="confirmPassword">
           Confirm password
@@ -236,9 +241,6 @@ export function LoginRoute() {
         </p>
         <AuthForm mode="login" next={next} />
         <SignInOptions next={next} />
-        <Link className="text-link" to="/forgot-password">
-          Forgot password?
-        </Link>
         <p className="auth-switch">
           New to Tolerance?{" "}
           <Link
