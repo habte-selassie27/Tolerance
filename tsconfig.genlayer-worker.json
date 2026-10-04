@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "types": ["node"],
+    "ignoreDeprecations": "6.0",
+    "rootDir": ".",
+    "outDir": ".worker-build",
+    "declaration": false,
+    "sourceMap": false,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "scripts/genlayer-worker.ts",
+    "scripts/create-judge-v2-synthetic-proof.ts",
+    "src/config/**/*.ts",
+    "src/lib/prisma.ts",
+    "src/server/auth.ts",
+    "src/server/dispute-workflow.ts",
+    "src/server/genlayer-submission.ts",
+    "src/server/judge-v2-synthetic-proof.ts",
+    "src/server/dispute-packet-v2.ts",
+    "genlayer/schemas/v2.ts",
+    "genlayer/schemas/dispute-packet.ts"
+  ],
+  "exclude": ["node_modules", ".next", ".worker-build"]
+}
