@@ -387,7 +387,7 @@ model Obligation {
   xLayerChainId            Int
   xLayerEscrow             String
   xLayerObligationId       String
-  toleranceCaseId           String                             @unique
+  toleranceCaseId          String                             @unique
   agreementHash            String
   policyHash               String
   evidenceRoot             String?
@@ -412,6 +412,7 @@ model Obligation {
   evidenceAcknowledgements EvidenceAuthorityAcknowledgement[]
 
   @@unique([xLayerChainId, xLayerEscrow, xLayerObligationId])
+  @@index([protocolVersion])
 }
 
 model ProtocolActionIntent {
