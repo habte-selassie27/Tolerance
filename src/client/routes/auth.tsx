@@ -16,6 +16,42 @@ const submitLabel = {
   reset: "Update password",
 } as const;
 
+/**
+ * Grades a candidate password against the same minimum the server enforces
+ * (`validateSignupInput`), so the meter never promises a pass the API will
+ * refuse. Anything weaker is capped at "Weak"; length, case and symbols then
+ * raise it from there.
+ */
+function passwordStrength(value: string) {
+  if (!value) return { score: 0, label: "" };
+  const meetsMinimum =
+    value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
+  if (!meetsMinimum) return { score: 1, label: "Weak" };
+  let bonus = 0;
+  if (value.length >= 12) bonus += 1;
+  if (value.length >= 16) bonus += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) bonus += 1;
+  if (/[^\w\s]/.test(value)) bonus += 1;
+  const score = bonus >= 3 ? 4 : bonus >= 2 ? 3 : 2;
+  const label = score === 4 ? "Strong" : score === 3 ? "Good" : "Fair";
+  return { score, label };
+}
+
+function PasswordRule({
+  met,
+  children,
+}: {
+  met: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <li className="password-rule" data-met={met}>
+      <span className="password-rule-mark" aria-hidden="true" />
+      {children}
+    </li>
+  );
+}
+
 export function AuthForm({
   mode,
   next,
@@ -25,10 +61,15 @@ export function AuthForm({
 }) {
   const fetcher = useFetcher<AuthFormState>();
   const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const state = fetcher.data;
   const pending = fetcher.state !== "idle";
   const signup = mode === "signup";
   const forgot = mode === "forgot";
+  // Only the flows that mint a new credential need strength feedback.
+  const setsPassword = signup || mode === "reset";
+  const strength = passwordStrength(password);
   return (
     <fetcher.Form method="post" className="auth-form" noValidate>
       {next && <input type="hidden" name="next" value={next} />}
@@ -71,6 +112,8 @@ export function AuthForm({
               }
               required
               minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
             <button
               className="text-button"
@@ -81,6 +124,18 @@ export function AuthForm({
               {showPassword ? "Hide" : "Show"}
             </button>
           </span>
+          {setsPassword && (
+            <span className="password-strength" aria-hidden="true">
+              <span className="password-strength-bars" data-level={strength.score}>
+                {[0, 1, 2, 3].map((index) => (
+                  <i key={index} data-on={index < strength.score} />
+                ))}
+              </span>
+              <span className="password-strength-label" data-level={strength.score}>
+                {strength.label}
+              </span>
+            </span>
+          )}
         </div>
       )}
       {signup && (
@@ -89,12 +144,29 @@ export function AuthForm({
           <input
             id="confirmPassword"
             name="confirmPassword"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             required
             minLength={8}
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
           />
         </label>
+      )}
+      {signup && (
+        <ul className="password-rules">
+          <PasswordRule met={password.length >= 8}>
+            At least 8 characters
+          </PasswordRule>
+          <PasswordRule
+            met={/[A-Za-z]/.test(password) && /\d/.test(password)}
+          >
+            A letter and a number
+          </PasswordRule>
+          <PasswordRule met={password.length > 0 && password === confirmation}>
+            Passwords match
+          </PasswordRule>
+        </ul>
       )}
       {state?.message && (
         <p
@@ -106,8 +178,15 @@ export function AuthForm({
           {state.message}
         </p>
       )}
-      <button className="button" disabled={pending} type="submit">
-        {pending ? "Please wait…" : submitLabel[mode]}
+      <button className="button auth-submit" disabled={pending} type="submit">
+        {pending ? (
+          <>
+            <span className="auth-submit-spinner" aria-hidden="true" />
+            Please wait…
+          </>
+        ) : (
+          submitLabel[mode]
+        )}
       </button>
     </fetcher.Form>
   );

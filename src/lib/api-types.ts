@@ -43,6 +43,8 @@ export type SignOutResponse = { ok: boolean; redirectTo: string };
 /** A provider handshake the browser should follow. */
 export type OAuthStartResponse = { ok: boolean; url: string };
 
+export type SetEmailResponse = { ok: boolean; message: string };
+
 /* -------------------------------------------------------------------------- */
 /* Workspace shell and summary                                                */
 /* -------------------------------------------------------------------------- */
@@ -52,6 +54,12 @@ export type WorkspaceShell = {
   user: string;
   wallet: string | null;
   needsOnboarding: boolean;
+  /**
+   * False for accounts that have no confirmed address yet, such as a wallet
+   * sign-in. Counterparty invitations are bound to an email, so the workspace
+   * gates on this rather than letting such an account discover the gap later.
+   */
+  emailVerified: boolean;
 };
 
 export type WorkspaceMetrics = {

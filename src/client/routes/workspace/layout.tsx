@@ -12,11 +12,18 @@ import type { WorkspaceShell } from "../../../lib/api-types";
  * that redirects; every child route reconciles organization membership itself.
  */
 export async function loader({ request }: LoaderFunctionArgs) {
+  const { pathname, search } = new URL(request.url);
   try {
-    return await apiLoad<WorkspaceShell>("/api/workspace");
+    const shell = await apiLoad<WorkspaceShell>("/api/workspace");
+    // Wallet sign-in produces an account with no confirmed address. Gate the
+    // whole workspace on confirming one, so the email-bound invitation rule
+    // stays a single rule rather than a check scattered across routes.
+    if (!shell.emailVerified && pathname !== "/app/email") {
+      throw redirect("/app/email");
+    }
+    return shell;
   } catch (error) {
     if (error instanceof ApiRequestError && error.status === 401) {
-      const { pathname, search } = new URL(request.url);
       const next = `${pathname}${search}`;
       throw redirect(`/login?next=${encodeURIComponent(next)}`);
     }

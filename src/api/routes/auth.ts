@@ -4,6 +4,7 @@ import { Router } from "express";
 import { validateSignupInput, validNewPassword } from "../../lib/auth-input";
 import { createServerSupabaseClient } from "../../lib/supabase";
 import { appOrigin, safeNextPath } from "../app";
+import { requireSession } from "../workspace";
 import { ApiError } from "../errors";
 
 export const authRouter: Router = Router();
@@ -135,6 +136,40 @@ authRouter.post("/auth/sign-out", async (_request, response) => {
 });
 
 /**
+ * Attaches an address to an account that signed in without one, such as a
+ * wallet sign-in. Counterparty invitations are bound to an email address, so
+ * this is what makes such an account able to accept one.
+ */
+authRouter.post("/auth/email", requireSession, async (request, response) => {
+  const email = field(request.body, "email").toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    response.status(400).json({
+      code: "INVALID_INPUT",
+      message: "Enter a valid email address.",
+    });
+    return;
+  }
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase.auth.updateUser({ email });
+  if (error) {
+    console.warn("tolerance.auth.email_update_failed", {
+      code: error.code ?? "AUTH_ERROR",
+    });
+    // Deliberately does not distinguish an address that is already in use.
+    response.status(400).json({
+      code: "EMAIL_REJECTED",
+      message:
+        "We could not attach that address. If it already belongs to another account, sign in with it instead.",
+    });
+    return;
+  }
+  response.json({
+    ok: true,
+    message: "Check that inbox for a confirmation link, then continue.",
+  });
+});
+
+/**
  * Starts an OAuth handshake. The provider URL is built on the server so the
  * PKCE verifier and nonce land in the same cookie jar that `/auth/callback`
  * reads back; the browser only follows the returned URL.
@@ -194,7 +229,10 @@ authRouter.get("/auth/confirm", async (request, response) => {
       type,
     });
     if (!error) {
-      response.redirect(303, "/app/onboarding");
+      response.redirect(
+        303,
+        safeNextPath(field(request.query, "next"), "/app"),
+      );
       return;
     }
   }

@@ -54,7 +54,13 @@ export function SignInOptions({ next }: { next?: string }) {
         statement: "Sign in to your Tolerance commercial workspace.",
       });
       if (error) throw new Error(error.message);
-      navigate(next ?? "/app", { replace: true });
+      // A wallet account has no address, so send it straight to the step that
+      // attaches one rather than letting the workspace guard bounce it back.
+      const { data } = await supabase.auth.getUser();
+      navigate(
+        data.user?.email_confirmed_at ? (next ?? "/app") : "/app/email",
+        { replace: true },
+      );
     } catch (failure) {
       setMessage(
         errorMessage(

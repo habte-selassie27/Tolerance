@@ -43,6 +43,11 @@ import WorkspaceLayout, {
   loader as workspaceLoader,
 } from "./routes/workspace/layout";
 import {
+  EmailStepRoute,
+  emailAction,
+  emailLoader,
+} from "./routes/workspace/email";
+import {
   OnboardingRoute,
   onboardingAction,
   onboardingLoader,
@@ -139,6 +144,12 @@ export const routes: RouteObject[] = [
         loader: activityLoader,
       },
       { path: "account", element: <AccountRoute />, loader: accountLoader },
+      {
+        path: "email",
+        element: <EmailStepRoute />,
+        loader: emailLoader,
+        action: emailAction,
+      },
       {
         path: "onboarding",
         element: <OnboardingRoute />,

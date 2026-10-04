@@ -22,8 +22,20 @@ export type CookieStore = {
   setAll: (entries: CookieEntry[]) => void;
 };
 
+export type AuthenticatedSubject = {
+  id: string;
+  email: string | null;
+  emailConfirmedAt: string | null;
+};
+
 export type RequestContext = {
   cookies: CookieStore;
+  /**
+   * Filled in by the session prefilter. The Supabase session is the authority
+   * on whether an address is confirmed, which the mirrored database row cannot
+   * express, so downstream routes read it from here instead of asking again.
+   */
+  auth?: AuthenticatedSubject;
 };
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -48,4 +60,16 @@ export function currentRequestContext(): RequestContext {
     );
   }
   return context;
+}
+
+/**
+ * Records the verified Supabase subject for this request. Only the session
+ * prefilter may call this, and only once the session has been resolved.
+ */
+export function setAuthenticatedSubject(subject: AuthenticatedSubject) {
+  currentRequestContext().auth = subject;
+}
+
+export function currentAuthenticatedSubject(): AuthenticatedSubject | null {
+  return storage.getStore()?.auth ?? null;
 }

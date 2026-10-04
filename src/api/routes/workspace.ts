@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { prisma } from "../../lib/prisma";
+import { currentAuthenticatedSubject } from "../../lib/request-context";
 import { requireSession, workspaceActor } from "../workspace";
 
 export const workspaceRouter: Router = Router();
@@ -26,6 +27,7 @@ workspaceRouter.get(
       user: actor.displayName ?? actor.email ?? "Tolerance user",
       wallet: wallet?.address ?? null,
       needsOnboarding: !membership,
+      emailVerified: Boolean(currentAuthenticatedSubject()?.emailConfirmedAt),
     });
   },
 );

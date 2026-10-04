@@ -3,6 +3,7 @@ import "server-only";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 import { prisma } from "../lib/prisma";
+import { setAuthenticatedSubject } from "../lib/request-context";
 import { createServerSupabaseClient } from "../lib/supabase";
 import { guards, requireUser } from "../server/auth";
 import { unauthorized } from "./errors";
@@ -20,6 +21,11 @@ export const requireSession: RequestHandler = async (
     const supabase = createServerSupabaseClient();
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw unauthorized();
+    setAuthenticatedSubject({
+      id: data.user.id,
+      email: data.user.email ?? null,
+      emailConfirmedAt: data.user.email_confirmed_at ?? null,
+    });
     next();
   } catch (error) {
     next(error);
