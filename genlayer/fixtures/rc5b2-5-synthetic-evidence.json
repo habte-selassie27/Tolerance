@@ -1,0 +1,6 @@
+{
+  "kind": "TOLERANCE_RC5B2_5_SYNTHETIC_EVIDENCE",
+  "measurementMm": "50.10",
+  "requirement": "Measured diameter must be less than or equal to 50.15 mm.",
+  "notice": "SYNTHETIC public evidence for a bounded JudgeV2 validator-fetch proof only; not a customer inspection record."
+}
