@@ -68,6 +68,25 @@ describe("wallet session boundaries", () => {
     expect(await resolveWalletSession("")).toBeNull();
   });
 
+  it("revokes sessions when a wallet is unlinked", async () => {
+    const counterparty = await import("../src/server/counterparty");
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync("src/server/counterparty.ts", "utf8"),
+    );
+    const body = source.slice(
+      source.indexOf("export async function unlinkWallet"),
+    );
+    // The revoke has to be in the same transaction as the unlink, so a failure
+    // cannot leave a session alive for a wallet the caller just removed.
+    expect(body).toContain("walletSession.updateMany");
+    expect(body).toContain("revokedAt: new Date()");
+    expect(body.indexOf("walletAccount.delete")).toBeLessThan(
+      body.indexOf("walletSession.updateMany"),
+    );
+    expect(body).toContain("prisma.$transaction");
+    expect(typeof counterparty.unlinkWallet).toBe("function");
+  });
+
   it("does not treat a session as a payment authorization", async () => {
     const wallet = await import("../src/server/wallet-session");
     const source = await import("node:fs").then((fs) =>

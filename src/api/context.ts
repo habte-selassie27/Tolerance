@@ -12,7 +12,8 @@ export const requestContext: RequestHandler = (
   response: Response,
   next: NextFunction,
 ) => {
+  // The store commits buffered session cookies just before the body is
+  // written; see createExpressCookieStore for why that is not a `finish` hook.
   const cookies = createExpressCookieStore(request, response);
-  response.on("finish", () => cookies.flush());
   runInRequestContext({ cookies }, next);
 };

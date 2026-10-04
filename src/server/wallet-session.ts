@@ -239,18 +239,3 @@ export async function revokeWalletSession(
   });
   return count > 0;
 }
-
-/** Revokes every live session for an address; used when a wallet is unlinked. */
-export async function revokeWalletSessionsForAddress(
-  userId: string,
-  address: string,
-) {
-  return prisma.walletSession.updateMany({
-    where: {
-      userId,
-      address: getAddress(address),
-      revokedAt: null,
-    },
-    data: { revokedAt: new Date() },
-  });
-}

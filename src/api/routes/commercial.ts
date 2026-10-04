@@ -108,6 +108,10 @@ commercialRouter.post("/deals", requireSession, async (request, response) => {
         title: input.title,
         buyerOrganizationRef: input.buyer,
         supplierOrganizationRef: input.supplier,
+        // A deal is created already ACTIVE. The schema default of DRAFT implies
+        // a drafting state this application has no transition out of, which
+        // would leave every dossier permanently showing "Setup".
+        status: "ACTIVE",
         createdById: actor.id,
       },
     });

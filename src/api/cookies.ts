@@ -10,8 +10,12 @@ type SupabaseCookie = {
 
 /**
  * Bridges Supabase's cookie adapter onto the Express request/response pair.
- * Session refresh writes are buffered and flushed after the handler settles so
- * that an error response cannot leave a partially written session behind.
+ *
+ * Session refresh writes are buffered rather than applied immediately, because
+ * the auth library can decide to write a cookie at any point during the
+ * handler. They are committed just before the response body is written: on
+ * `finish` the headers have already gone, and calling `res.cookie` there throws
+ * `ERR_HTTP_HEADERS_SENT`, which from an event handler takes the process down.
  */
 export function createExpressCookieStore(
   request: Request,
@@ -35,18 +39,35 @@ export function createExpressCookieStore(
       }
     },
     flush() {
-      for (const { name, value, options } of pending.values()) {
-        response.cookie(name, value, {
-          path: "/",
-          httpOnly: true,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-          ...options,
-        });
-      }
+      if (pending.size === 0) return;
+      const entries = [...pending.values()];
       pending.clear();
+      // Once the headers are out there is nothing to attach a cookie to.
+      // Dropping is the only correct option; throwing here would abort the
+      // process rather than fail one request.
+      if (response.headersSent || response.writableEnded) return;
+      for (const { name, value, options } of entries) {
+        try {
+          response.cookie(name, value, {
+            path: "/",
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            ...options,
+          });
+        } catch {
+          return;
+        }
+      }
     },
   };
+
+  const end = response.end.bind(response);
+  response.end = ((...args: Parameters<Response["end"]>) => {
+    store.flush();
+    return end(...args);
+  }) as Response["end"];
+  response.on("close", () => pending.clear());
 
   return store;
 }

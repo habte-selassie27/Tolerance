@@ -62,6 +62,22 @@ describe("auth rate limiting", () => {
     expect(run(verify, fakeRequest("10.0.0.4"))).toHaveLength(0);
   });
 
+  it("uses a tighter budget for guessable credentials than for signing", () => {
+    resetRateLimits();
+    // Both budgets are asserted here rather than trusting the route wiring, so a
+    // future refactor cannot quietly widen the credential limit.
+    const credentials = rateLimit({
+      name: "credentials",
+      limit: 8,
+      windowMs: 5 * 60_000,
+    });
+    const request = fakeRequest("10.0.0.6");
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      expect(run(credentials, request)).toHaveLength(0);
+    }
+    expect(run(credentials, request)).toHaveLength(1);
+  });
+
   it("refuses to describe the caller", () => {
     resetRateLimits();
     const limiter = rateLimit({ name: "test", limit: 1, windowMs: 60_000 });

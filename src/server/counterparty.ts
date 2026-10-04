@@ -135,7 +135,20 @@ export async function unlinkWallet(walletId: string) {
     throw new WalletOwnershipError(
       "This wallet is assigned to an obligation and cannot be unlinked.",
     );
-  await prisma.walletAccount.delete({ where: { id: wallet.id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.walletAccount.delete({ where: { id: wallet.id } });
+    // Unlinking is what someone does when they believe a wallet is lost. Any
+    // first-party session that wallet signed must die with it, or the
+    // compromised key keeps a valid login for the rest of its lifetime.
+    await tx.walletSession.updateMany({
+      where: {
+        userId: actor.id,
+        address: wallet.address,
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+  });
 }
 
 export class DealInvitationError extends Error {}
