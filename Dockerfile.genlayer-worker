@@ -1,0 +1,31 @@
+FROM node:24-bookworm-slim AS build
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# The worker is compiled in this stage, so build-time typings must be available
+# even when Railway supplies NODE_ENV=production for the runtime service.
+RUN corepack enable && pnpm install --frozen-lockfile --prod=false
+COPY . .
+RUN pnpm exec prisma generate && pnpm build:genlayer-worker && pnpm prune --prod
+
+FROM node:24-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+    ca-certificates \
+    dbus-x11 \
+    gnome-keyring \
+    libsecret-1-0 \
+    openssl \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable \
+  && npm install --global genlayer@0.39.2
+
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.worker-build ./.worker-build
+COPY scripts/genlayer-worker-entrypoint.sh ./scripts/genlayer-worker-entrypoint.sh
+RUN chmod 0550 scripts/genlayer-worker-entrypoint.sh
+
+ENV NODE_ENV=production
+CMD ["scripts/genlayer-worker-entrypoint.sh"]
