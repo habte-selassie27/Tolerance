@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { prisma } from "../lib/prisma";
 import { createServerSupabaseClient } from "../lib/supabase";
+import { resolveCurrentWalletSession } from "./wallet-session";
 
 export class AuthorizationError extends Error {
   constructor(message = "You are not authorized to perform this action.") {
@@ -69,6 +70,8 @@ export type AuthenticatedActor = {
 };
 
 export async function requireUser(): Promise<AuthenticatedActor> {
+  const walletActor = await resolveCurrentWalletSession();
+  if (walletActor) return walletActor;
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user)
