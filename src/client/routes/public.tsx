@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import type { KeyboardEvent } from "react";
+
+import { Link, useLocation, useNavigate } from "react-router";
 
 import { Brand } from "../components/primitives";
 
@@ -260,7 +262,50 @@ function DossierPreview() {
   );
 }
 
+const DEMO_TABS = [
+  { id: "terms", label: "Terms" },
+  { id: "evidence", label: "Evidence" },
+  { id: "evaluation", label: "Evaluation" },
+  { id: "lifecycle", label: "Lifecycle" },
+] as const;
+
+type DemoTabId = (typeof DEMO_TABS)[number]["id"];
+
+function demoTabId(value: string): DemoTabId {
+  return DEMO_TABS.some((tab) => tab.id === value)
+    ? (value as DemoTabId)
+    : "terms";
+}
+
 export function DemoRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const active = demoTabId(location.hash.slice(1));
+
+  const selectTab = (id: DemoTabId) => {
+    if (id !== active) navigate({ hash: id }, { replace: true });
+  };
+
+  const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const current = DEMO_TABS.findIndex((tab) => tab.id === active);
+    const last = DEMO_TABS.length - 1;
+    const next =
+      event.key === "ArrowRight"
+        ? (current + 1) % DEMO_TABS.length
+        : event.key === "ArrowLeft"
+          ? (current + last) % DEMO_TABS.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? last
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    const id = DEMO_TABS[next].id;
+    navigate({ hash: id }, { replace: true });
+    document.getElementById(`demo-tab-${id}`)?.focus();
+  };
+
   return (
     <main className="demo-shell">
       <header className="demo-header">
@@ -278,14 +323,36 @@ export function DemoRoute() {
           customer record or simulating a live transaction.
         </p>
       </section>
-      <nav className="tabs" aria-label="Demo dossier sections">
-        <a href="#terms">Terms</a>
-        <a href="#evidence">Evidence</a>
-        <a href="#evaluation">Evaluation</a>
-        <a href="#lifecycle">Lifecycle</a>
-      </nav>
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label="Demo dossier sections"
+        onKeyDown={onTabKeyDown}
+      >
+        {DEMO_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            id={`demo-tab-${tab.id}`}
+            role="tab"
+            aria-controls={tab.id}
+            aria-selected={tab.id === active}
+            tabIndex={tab.id === active ? 0 : -1}
+            onClick={() => selectTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       <section className="demo-grid">
-        <article className="panel" id="terms">
+        <article
+          className="panel"
+          id="terms"
+          role="tabpanel"
+          aria-labelledby="demo-tab-terms"
+          tabIndex={0}
+          hidden={active !== "terms"}
+        >
           <p className="eyebrow">Governing requirement</p>
           <h2>Diameter tolerance</h2>
           <div className="governing-value">±0.15 mm</div>
@@ -300,7 +367,14 @@ export function DemoRoute() {
             </p>
           </details>
         </article>
-        <article className="panel" id="evidence">
+        <article
+          className="panel"
+          id="evidence"
+          role="tabpanel"
+          aria-labelledby="demo-tab-evidence"
+          tabIndex={0}
+          hidden={active !== "evidence"}
+        >
           <p className="eyebrow">Inspection evidence</p>
           <h2>50.10 mm measured</h2>
           <p>Supplier inspection report · page 2</p>
@@ -320,7 +394,14 @@ export function DemoRoute() {
             after GenLayer validators fetch it under a pre-agreed policy.
           </p>
         </article>
-        <article className="panel" id="evaluation">
+        <article
+          className="panel"
+          id="evaluation"
+          role="tabpanel"
+          aria-labelledby="demo-tab-evaluation"
+          tabIndex={0}
+          hidden={active !== "evaluation"}
+        >
           <p className="eyebrow">Evidence evaluation</p>
           <h2 className="success-text">Satisfied</h2>
           <p>
@@ -332,7 +413,14 @@ export function DemoRoute() {
             final payment authority.
           </p>
         </article>
-        <article className="panel" id="lifecycle">
+        <article
+          className="panel"
+          id="lifecycle"
+          role="tabpanel"
+          aria-labelledby="demo-tab-lifecycle"
+          tabIndex={0}
+          hidden={active !== "lifecycle"}
+        >
           <p className="eyebrow">Contested lifecycle</p>
           <h2>From commitment to settlement</h2>
           <div className="timeline">
