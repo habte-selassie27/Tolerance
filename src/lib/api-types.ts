@@ -45,6 +45,16 @@ export type OAuthStartResponse = { ok: boolean; url: string };
 
 export type SetEmailResponse = { ok: boolean; message: string };
 
+/** A first-party wallet challenge to sign with `personal_sign`. */
+export type WalletChallengeResponse = {
+  ok: boolean;
+  challengeId: string;
+  message: string;
+  expiresAt: string;
+};
+
+export type WalletVerifyResponse = { ok: boolean; redirectTo: string };
+
 /* -------------------------------------------------------------------------- */
 /* Workspace shell and summary                                                */
 /* -------------------------------------------------------------------------- */

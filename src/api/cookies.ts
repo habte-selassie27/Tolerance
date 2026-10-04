@@ -20,6 +20,10 @@ export function createExpressCookieStore(
   const pending = new Map<string, CookieEntry>();
 
   const store: CookieStore & { flush: () => void } = {
+    get(name) {
+      const value = (request.cookies as Record<string, string>)[name];
+      return typeof value === "undefined" ? null : { name, value };
+    },
     getAll() {
       return Object.entries(request.cookies as Record<string, string>).map(
         ([name, value]) => ({ name, value }),

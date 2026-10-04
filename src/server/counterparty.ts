@@ -11,7 +11,8 @@ export class WalletOwnershipError extends Error {}
 
 export function assertWalletChallenge(
   challenge: {
-    userId: string;
+    /** Null only for a sign-in challenge, which this guard never accepts. */
+    userId: string | null;
     normalizedAddress: string;
     message: string;
     expiresAt: Date;

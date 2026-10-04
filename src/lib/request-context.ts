@@ -18,6 +18,7 @@ export type CookieEntry = {
 };
 
 export type CookieStore = {
+  get: (name: string) => { name: string; value: string } | null;
   getAll: () => Array<{ name: string; value: string }>;
   setAll: (entries: CookieEntry[]) => void;
 };
@@ -66,6 +67,15 @@ export function currentRequestContext(): RequestContext {
  * Records the verified Supabase subject for this request. Only the session
  * prefilter may call this, and only once the session has been resolved.
  */
+/**
+ * The cookie surface of the current request, or null when no request is in
+ * flight. Domain modules use this to stay usable in the GenLayer worker, which
+ * runs without an HTTP context.
+ */
+export function currentCookieStore(): CookieStore | null {
+  return storage.getStore()?.cookies ?? null;
+}
+
 export function setAuthenticatedSubject(subject: AuthenticatedSubject) {
   currentRequestContext().auth = subject;
 }

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-import type { OAuthStartResponse } from "../../lib/api-types";
+import type {
+  OAuthStartResponse,
+  WalletChallengeResponse,
+  WalletVerifyResponse,
+} from "../../lib/api-types";
 import { errorMessage, jsonBody, submit } from "../lib/api";
-import { createBrowserSupabaseClient } from "../lib/supabase-browser";
-
-import type { EthereumWallet } from "@supabase/supabase-js";
 
 /**
  * The alternative sign-in methods offered alongside email and password.
@@ -35,6 +36,11 @@ export function SignInOptions({ next }: { next?: string }) {
     window.location.assign(result.data.url);
   }
 
+  /**
+   * Wallet sign-in uses this project's own challenge rather than an identity
+   * provider: the server issues the message, the wallet signs exactly that
+   * text, and the server verifies the signature and mints the session itself.
+   */
   async function signInWithWallet() {
     setBusy("wallet");
     setMessage("");
@@ -45,22 +51,35 @@ export function SignInOptions({ next }: { next?: string }) {
           "No EVM wallet was found. Install a wallet extension to sign in.",
         );
       }
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithWeb3({
-        chain: "ethereum",
-        // The injected provider is structurally an EIP-1193 wallet; the declared
-        // window type is the looser shape used elsewhere in the browser bundle.
-        wallet: injected as unknown as EthereumWallet,
-        statement: "Sign in to your Tolerance commercial workspace.",
-      });
-      if (error) throw new Error(error.message);
-      // A wallet account has no address, so send it straight to the step that
-      // attaches one rather than letting the workspace guard bounce it back.
-      const { data } = await supabase.auth.getUser();
-      navigate(
-        data.user?.email_confirmed_at ? (next ?? "/app") : "/app/email",
-        { replace: true },
+      const accounts = (await injected.request({
+        method: "eth_requestAccounts",
+      })) as string[];
+      const address = accounts[0];
+      if (!address) throw new Error("The wallet did not provide an account.");
+
+      const challenge = await submit<WalletChallengeResponse>(
+        "/api/auth/wallet/challenge",
+        jsonBody({ address }),
+        "TermsMet could not start wallet sign-in.",
       );
+      if (!challenge.ok) throw new Error(challenge.message);
+
+      const signature = (await injected.request({
+        method: "personal_sign",
+        params: [challenge.data.message, address],
+      })) as string;
+
+      const verified = await submit<WalletVerifyResponse>(
+        "/api/auth/wallet/verify",
+        jsonBody({
+          challengeId: challenge.data.challengeId,
+          signature,
+          next: next ?? "",
+        }),
+        "TermsMet could not verify that wallet signature.",
+      );
+      if (!verified.ok) throw new Error(verified.message);
+      navigate(verified.data.redirectTo, { replace: true });
     } catch (failure) {
       setMessage(
         errorMessage(

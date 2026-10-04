@@ -1,11 +1,46 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { Router } from "express";
+import { z } from "zod";
 
 import { validateSignupInput, validNewPassword } from "../../lib/auth-input";
 import { createServerSupabaseClient } from "../../lib/supabase";
+import {
+  WALLET_SESSION_COOKIE,
+  createWalletSignInChallenge,
+  currentWalletSessionToken,
+  revokeWalletSession,
+  verifyWalletSignInChallenge,
+} from "../../server/wallet-session";
 import { appOrigin, safeNextPath } from "../app";
-import { requireSession } from "../workspace";
 import { ApiError } from "../errors";
+import { rateLimit } from "../rate-limit";
+import { requireSession } from "../workspace";
+
+const WALLET_NETWORK = "xlayer-testnet-1952";
+
+const challengeSchema = z.object({
+  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  network: z
+    .string()
+    .regex(/^[a-z0-9-]{3,40}$/)
+    .default(WALLET_NETWORK),
+});
+
+const verifySchema = z.object({
+  challengeId: z.uuid(),
+  signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/),
+  next: z.string().max(200).optional(),
+});
+
+/**
+ * Signing is an interactive prompt, so the budget allows a few retries for a
+ * mis-wired wallet while still bounding automated signature oracles.
+ */
+const walletSignInLimiter = rateLimit({
+  name: "wallet-sign-in",
+  limit: 10,
+  windowMs: 5 * 60_000,
+});
 
 export const authRouter: Router = Router();
 
@@ -132,6 +167,60 @@ authRouter.post("/auth/reset-password", async (request, response) => {
 authRouter.post("/auth/sign-out", async (_request, response) => {
   const supabase = createServerSupabaseClient();
   await supabase.auth.signOut();
+  response.json({ ok: true, redirectTo: "/login" });
+});
+
+/**
+ * Issues a wallet sign-in challenge. The caller proves control of the address
+ * with this project's own challenge format, and the session that follows is
+ * minted here rather than delegated to an identity provider.
+ */
+authRouter.post(
+  "/auth/wallet/challenge",
+  walletSignInLimiter,
+  async (request, response) => {
+    const input = challengeSchema.parse(request.body);
+    const challenge = await createWalletSignInChallenge(
+      input.address,
+      input.network,
+    );
+    response.status(201).json({
+      ok: true,
+      challengeId: challenge.id,
+      message: challenge.message,
+      expiresAt: challenge.expiresAt.toISOString(),
+    });
+  },
+);
+
+/** Consumes a challenge and issues the first-party session cookie. */
+authRouter.post(
+  "/auth/wallet/verify",
+  walletSignInLimiter,
+  async (request, response) => {
+    const input = verifySchema.parse(request.body);
+    const result = await verifyWalletSignInChallenge({
+      challengeId: input.challengeId,
+      signature: input.signature,
+    });
+    response.cookie(WALLET_SESSION_COOKIE, result.token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: result.expiresAt,
+    });
+    response.json({
+      ok: true,
+      redirectTo: input.next || "/app",
+    });
+  },
+);
+
+/** Revokes the caller's wallet session and clears the cookie. */
+authRouter.delete("/auth/wallet/session", async (_request, response) => {
+  await revokeWalletSession(currentWalletSessionToken());
+  response.clearCookie(WALLET_SESSION_COOKIE, { path: "/" });
   response.json({ ok: true, redirectTo: "/login" });
 });
 

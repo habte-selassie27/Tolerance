@@ -7,6 +7,7 @@ import { DisputePacketError } from "../server/dispute-packet";
 import { DisputeWorkflowError } from "../server/dispute-workflow";
 import { EvidenceAuthorityError } from "../server/evidence-authority";
 import { WalletOwnershipError } from "../server/counterparty";
+import { WalletSessionError } from "../server/wallet-session";
 import { CommercialLifecycleError } from "../server/xlayer-obligation-lifecycle";
 
 export class ApiError extends Error {
@@ -14,6 +15,8 @@ export class ApiError extends Error {
     readonly status: number,
     override readonly message: string,
     readonly code: string,
+    /** Seconds the caller should wait, sent as Retry-After. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -35,7 +38,12 @@ export function notFound(message = "That record was not found.") {
  */
 function classify(error: unknown) {
   if (error instanceof ApiError)
-    return { status: error.status, message: error.message, code: error.code };
+    return {
+      status: error.status,
+      message: error.message,
+      code: error.code,
+      retryAfterSeconds: error.retryAfterSeconds,
+    };
   if (error instanceof AuthorizationError)
     return {
       status: 403,
@@ -54,6 +62,8 @@ function classify(error: unknown) {
     error instanceof EvidenceAuthorityError
   )
     return { status: 409, message: error.message, code: "STATE_CONFLICT" };
+  if (error instanceof WalletSessionError)
+    return { status: 401, message: error.message, code: error.code };
   if (
     error instanceof WalletOwnershipError ||
     error instanceof DealInvitationError ||
@@ -72,6 +82,8 @@ export const apiErrorHandler: ErrorRequestHandler = (
   if (response.headersSent) return next(error);
   const classified = classify(error);
   if (classified) {
+    if (classified.retryAfterSeconds)
+      response.setHeader("Retry-After", String(classified.retryAfterSeconds));
     response.status(classified.status).json({
       code: classified.code,
       message: classified.message,
