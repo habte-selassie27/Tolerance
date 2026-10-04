@@ -1,0 +1,11 @@
+# GenLayer trust model
+
+Tolerance uses GenLayer validator consensus and appeals for the contested substantive judgment. X Layer cannot independently read GenLayer state, so the cross-network boundary is a **threshold trusted attestation bridge**, not trustless transport.
+
+The contract requires at least two distinct, currently authorised `RESOLUTION_ATTESTOR_ROLE` signers (target operations: 2-of-3) over one identical EIP-712 payload. It binds source network/IC, Tolerance case ID, GenLayer transaction/case ID and result hash, X Layer chain/escrow, obligation and all evidence/policy hashes, verdict, nonce and expiry. It derives recipients and full amounts itself; no attestation supplies a beneficiary or arbitrary split.
+
+Residual trust: a colluding/compromised threshold can falsely report a GenLayer verdict and mis-settle between buyer and supplier. It cannot redirect escrow to a third party. Role administration and attestor rotation are also trust boundaries. Controls are signer diversity, role revocation/rotation, pause, strict bindings, unique signatures, replay/expiry checks, terminal-state protection and a 2-of-2 mutual exit. The future relay must verify both GenLayer transaction finality and the resolved-case state before signing.
+
+Phase 2C adds two narrower trust boundaries. The immutable deployment submitter can censor or curate which packet reaches GenLayer, but cannot directly write a verdict. GenLayer can be neutral only relative to validator-visible evidence: omission or biased curation can bias judgment. Packet construction therefore binds the canonical evidence root and exact packet hash, and the future product must make the packet reviewable by both parties before submission.
+
+All packet evidence and party messages are untrusted data. Contract-owned instructions deny them authority; deterministic validation rejects unknown verdicts/statuses, fabricated source IDs, incomplete mandatory findings and unsafe cross-field combinations. Validators independently evaluate the same substantive packet and must agree on the business verdict and mandatory requirement statuses. This reduces single-model authority but does not guarantee objective truth. Complete private EvidenceBundles remain offchain; Phase 2C uses only synthetic evidence, and validator-visible packet data may be publicly observable.

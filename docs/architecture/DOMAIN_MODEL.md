@@ -1,0 +1,11 @@
+# Domain model
+
+`Organisation` owns `User` memberships and verified wallet associations. A `Deal` joins one buyer and one supplier organisation. A `Deal` has append-only `AgreementVersion` records. An `Obligation` is exactly one milestone and references one accepted agreement version. It owns reviewed `Requirement` records.
+
+`Document` is an immutable uploaded blob record (content hash, MIME, storage key, uploader, classification). `EvidenceBundle` selects document versions for one obligation and is immutable once locked; its canonical ordered manifest hashes to `bundleHash` / onchain evidence root. `SourceBlock` is a deterministic page-aware extraction record bound to a document hash and bundle version; it supplies stable, server-verifiable citation IDs.
+
+`DeterministicCheck` records a reproducible rule result. `RequirementEvaluation` records requirement status, stable source-block citations, confidence, exceptions and run provenance. `Adjudication` is a versioned non-economic evaluation aggregate. `SignedOutcome` is the immutable, replay-protected EIP-712 candidate created only after policy eligibility and bound to current evidence root and policy hash. Canonical X Layer contract state is the sole authority for funded/settled economic status. `SettlementTransaction` / `SettlementReceipt` are application projections of canonical transactions, receipts and events; they never independently declare funds settled. `Challenge` freezes auto-finalisation and may add a new evidence bundle/version. `AuditEvent` is append-only for all material changes.
+
+Requirement statuses: `SATISFIED`, `NOT_SATISFIED`, `INSUFFICIENT_EVIDENCE`, `CONTRADICTORY_EVIDENCE`, `HUMAN_REVIEW_REQUIRED`. Obligation statuses: `DRAFT`, `PENDING_ACCEPTANCE`, `ACCEPTED`, `FUNDED`, `EVIDENCE_LOCKED`, `VERDICT_PROPOSED`, `DISPUTED`, `SETTLED`, `REFUNDED`, `CANCELLED`. Challenge duration is immutable per accepted obligation and must be contract-bounded; the normal fixture is 24 hours, while explicitly labelled demo fixtures may be shorter.
+
+IDs are UUIDs offchain; `obligationId`, current `evidenceRoot`, amount/token/wallets and terminal economic state are onchain. Never put document text, names, emails, citations or PII onchain.

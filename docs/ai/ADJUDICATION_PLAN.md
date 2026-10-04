@@ -1,0 +1,10 @@
+# AI adjudication plan
+
+1. Ingest immutable approved agreement/amendment excerpts and locked evidence bundle. Run malware/content validation and page-aware extraction/OCR first. Produce ordered, stable source blocks (`bundleVersion:documentHash:page:block`) with extracted text, page/geometry anchors, extraction version and source-content hash.
+2. Run deterministic rules (identity, quantity, date, required-document presence, hash/version/root, structured values). A hard deterministic failure is immutable unless a pre-written policy explicitly permits a cited semantic exception.
+3. Provide only the governing excerpts, approved requirements, stable source IDs/page anchors and deterministic outputs to the model. Treat every document token as untrusted evidence, never instructions. Direct model PDF/image input may supplement visually meaningful or poorly scanned evidence, but it never replaces the Tolerance source-block provenance layer.
+4. Require a strict schema: per-requirement status, confidence, stable source IDs, concise explanation, missing evidence, contradictions, exceptions and recommended non-executable action. Validate every cited source ID against the exact locked EvidenceBundle version and verify page/block existence server-side; reject ungrounded or unsupported output.
+5. A deterministic policy engine maps validated findings to PASS/FAIL/REVIEW. Mandatory unresolved evidence, contradiction, confidence below threshold or invalid citations produce REVIEW, never PASS.
+6. Persist model/provider/version, prompt-template ID, input manifest/root, output hash, policy version, validation results and citations. Only the separate signer may sign an EIP-712 payload after policy eligibility.
+
+No agent loop, tools, long-term memory, retrieval corpus, autonomous wallet call or hidden policy interpretation is in V1. The automatic path never chooses a discretionary partial settlement: PASS can release the authorised amount only; a split outcome is a resolver-only dispute outcome.

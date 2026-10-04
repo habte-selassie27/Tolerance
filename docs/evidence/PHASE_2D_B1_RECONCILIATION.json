@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1",
+  "phase": "2D-B1",
+  "xLayer": {
+    "chainId": 1952,
+    "escrow": "0xb0E937fd0AA0864167C85ccCBde282F847FC5eBd",
+    "deploymentTx": "0x918f73428e287204c428162724ece7675c1f3bd9bd440f68aad5b5f9384a8f2c",
+    "token": "0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c",
+    "threshold": 2
+  },
+  "genLayer": {
+    "network": "studionet",
+    "chainId": 61999,
+    "judge": "0xFF1de4Ec0D3E26eC3BCa080Fd4587901dB48a56b"
+  },
+  "attestors": [
+    "0xCE7F067d347C2362c749D379415DF079B61464B9",
+    "0xc96a7c674E9f412E9C555B13974C9c605cEE72f0",
+    "0xd88F13151EAcE21E9fa241F14eAD4A98b309Af4E"
+  ],
+  "obligation1001": {
+    "marker": "LIVE_GENLAYER_LINKED_FINALIZED_STATE_VERIFIED_AUTOMATIC_ATTESTATION_BLOCKED",
+    "caseId": "0xc2432734d7cf7bc9091469f8743bf80573232d0f5eb846257759b3391e6b25f0",
+    "disputePacketHash": "0x5ff3dfe2ef31d8d0e8492d34ad148fbd20c8fcb7c8c69187fbe9ce153e6cfe43",
+    "xLayerDisputeTx": "0xb07b18ea71d4209294e4d940a2a862d6f6a4d9eac405bd586f747d5e92972714",
+    "genLayerTx": "0x12a88dc02cb9d863d35c3c302ef7de52992cd3a11ea468e6d36b4e7d56f76395",
+    "verdict": "RELEASE_FULL",
+    "xLayerState": "DISPUTED"
+  },
+  "obligation1002": {
+    "marker": "LIVE_GENLAYER_LINKED_FINALIZED_STATE_VERIFIED_AUTOMATIC_ATTESTATION_BLOCKED",
+    "caseId": "0x93e4082c91ee13fb3044a4f502baf6e7eb1466de8bf1f35233af5f771b2fcde3",
+    "disputePacketHash": "0x47c9644730bf53dc3902c2a4e9046644ddc6813e7a150dd5c79f7c71ad3438ff",
+    "xLayerDisputeTx": "0x3fed1914526bfb978f706d38d554817bfd54b122bb667b4fe82add4d0f2b6fcb",
+    "genLayerTx": "0xa38b1f037c5bd3bddd47675c92fe1b8bcabe12227543dd2015b353482c272b9f",
+    "verdict": "INSUFFICIENT_EVIDENCE",
+    "businessVerdictIsNotProtocolUndetermined": true,
+    "xLayerState": "DISPUTED"
+  },
+  "obligation1003": {
+    "marker": "TEST_ONLY_THRESHOLD_FIXTURE_NOT_GENLAYER_VERIFIED",
+    "caseId": "0x05e170b42e53ced76fb6fc7fdb07f31944a6d5df635a26249659b757a77374fa",
+    "fundedAmount": "1000000",
+    "attestationDigest": "0x9524677d79aabdd55c280894b6b04e90c55808a68656db0ac120e6214dedf638",
+    "oneSigner": "REJECTED",
+    "duplicateSigner": "REJECTED",
+    "twoOfThreeResolutionTx": "0xd27897c2adbad948345306e8d9ea6a36629c7c8c05eb1fbabc176e9b84cf6994",
+    "supplierDelta": "1000000",
+    "replay": "REJECTED",
+    "finalState": "SETTLED"
+  }
+}
