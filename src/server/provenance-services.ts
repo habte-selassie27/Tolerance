@@ -1,6 +1,14 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { guards } from "./auth";
+
+export class ProvenanceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProvenanceError";
+  }
+}
 
 export async function createRequirement(
   actorId: string,
@@ -51,7 +59,7 @@ export async function attachRequirementSourceBlock(
     block.document.dealId !== req.obligation.dealId ||
     block.document.status !== "EXTRACTED"
   )
-    throw new Error("Invalid governing source");
+    throw new ProvenanceError("Invalid governing source");
   const link = await prisma.requirementSourceBlock.upsert({
     where: { requirementId_sourceBlockId: { requirementId, sourceBlockId } },
     create: { requirementId, sourceBlockId, precedence },
@@ -83,7 +91,7 @@ export async function linkEvidenceToRequirement(
   ]);
   const access = await guards.requireDealAccess(actorId, e.obligation.dealId);
   if (e.obligationId !== r.obligationId)
-    throw new Error("Cross-obligation evidence mapping rejected");
+    throw new ProvenanceError("Cross-obligation evidence mapping rejected");
   const link = await prisma.evidenceRequirement.upsert({
     where: { evidenceId_requirementId: { evidenceId, requirementId } },
     create: { evidenceId, requirementId },
@@ -116,7 +124,7 @@ export async function linkEvidenceSourceBlock(
     evidence.obligation.dealId,
   );
   if (block.document.dealId !== evidence.obligation.dealId)
-    throw new Error("Cross-deal source mapping rejected");
+    throw new ProvenanceError("Cross-deal source mapping rejected");
   const link = await prisma.evidenceSourceBlock.upsert({
     where: { evidenceId_sourceBlockId: { evidenceId, sourceBlockId } },
     create: { evidenceId, sourceBlockId },
@@ -130,6 +138,107 @@ export async function linkEvidenceSourceBlock(
     `${evidenceId}:${sourceBlockId}`,
   );
   return link;
+}
+
+export async function registerEvidence(
+  actorId: string,
+  input: {
+    obligationId: string;
+    sourceBlockId: string;
+    requirementId?: string;
+  },
+) {
+  const obligation = await prisma.obligation.findUnique({
+    where: { id: input.obligationId },
+    include: { deal: true },
+  });
+  if (!obligation) throw new ProvenanceError("Obligation not found");
+  const access = await guards.requireDealAccess(actorId, obligation.dealId);
+  const block = await prisma.sourceBlock.findUnique({
+    where: { id: input.sourceBlockId },
+    include: { document: true },
+  });
+  if (!block || block.document.status !== "EXTRACTED")
+    throw new ProvenanceError("Invalid evidence source");
+  if (block.document.dealId !== obligation.dealId)
+    throw new ProvenanceError("Cross-deal source mapping rejected");
+  if (input.requirementId) {
+    const requirement = await prisma.requirement.findUnique({
+      where: { id: input.requirementId },
+    });
+    if (!requirement || requirement.obligationId !== obligation.id)
+      throw new ProvenanceError("Cross-obligation evidence mapping rejected");
+  }
+  const contentHash = block.contentHash;
+  const existing = await prisma.evidence.findUnique({
+    where: {
+      obligationId_contentHash: { obligationId: obligation.id, contentHash },
+    },
+  });
+  const evidence =
+    existing ??
+    (await prisma.evidence.create({
+      data: {
+        obligationId: obligation.id,
+        documentId: block.documentId,
+        sourceBlockId: block.id,
+        contentHash,
+        bundleHash: `sha256:${createHash("sha256")
+          .update(`tolerance-evidence:${obligation.id}:${contentHash}`)
+          .digest("hex")}`,
+      },
+    }));
+  if (!existing)
+    await audit(
+      actorId,
+      access.organizationId,
+      "EVIDENCE_REGISTERED",
+      "Evidence",
+      evidence.id,
+    );
+  const sourceLink = await prisma.evidenceSourceBlock.findUnique({
+    where: {
+      evidenceId_sourceBlockId: {
+        evidenceId: evidence.id,
+        sourceBlockId: block.id,
+      },
+    },
+  });
+  if (!sourceLink) {
+    await prisma.evidenceSourceBlock.create({
+      data: { evidenceId: evidence.id, sourceBlockId: block.id },
+    });
+    await audit(
+      actorId,
+      access.organizationId,
+      "EVIDENCE_SOURCE_ATTACHED",
+      "EvidenceSourceBlock",
+      `${evidence.id}:${block.id}`,
+    );
+  }
+  if (input.requirementId) {
+    const requirementLink = await prisma.evidenceRequirement.findUnique({
+      where: {
+        evidenceId_requirementId: {
+          evidenceId: evidence.id,
+          requirementId: input.requirementId,
+        },
+      },
+    });
+    if (!requirementLink) {
+      await prisma.evidenceRequirement.create({
+        data: { evidenceId: evidence.id, requirementId: input.requirementId },
+      });
+      await audit(
+        actorId,
+        access.organizationId,
+        "EVIDENCE_REQUIREMENT_LINKED",
+        "EvidenceRequirement",
+        `${evidence.id}:${input.requirementId}`,
+      );
+    }
+  }
+  return evidence;
 }
 
 export async function resolveEffectiveGoverningSources(requirementId: string) {

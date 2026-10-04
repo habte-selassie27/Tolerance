@@ -202,6 +202,50 @@ export async function buildEvidenceBundleV1(
   return { ...finalized, snapshot };
 }
 
+export async function publishEvidenceRoot(
+  actorId: string,
+  obligationId: string,
+) {
+  const bundle = await buildEvidenceBundleV1(actorId, obligationId);
+  const obligation = await prisma.obligation.findUniqueOrThrow({
+    where: { id: obligationId },
+    select: {
+      dealId: true,
+      evidenceRoot: true,
+      observedOnchainState: true,
+    },
+  });
+  const changed =
+    obligation.evidenceRoot !== null &&
+    obligation.evidenceRoot !== bundle.evidenceRoot;
+  if (changed && obligation.observedOnchainState === "EVIDENCE_COMMITTED")
+    throw new EvidenceBundleError("EVIDENCE_ROOT_FROZEN");
+  const access = await guards.requireDealAccess(actorId, obligation.dealId);
+  await prisma.obligation.update({
+    where: { id: obligationId },
+    data: { evidenceRoot: bundle.evidenceRoot },
+  });
+  await prisma.auditEvent.create({
+    data: {
+      actorId,
+      organizationId: access.organizationId,
+      action: changed ? "EVIDENCE_ROOT_REPUBLISHED" : "EVIDENCE_ROOT_PUBLISHED",
+      targetType: "Obligation",
+      targetId: obligationId,
+      metadata: {
+        evidenceBundleHash: bundle.evidenceBundleHash,
+        evidenceRoot: bundle.evidenceRoot,
+      },
+    },
+  });
+  return {
+    evidenceRoot: bundle.evidenceRoot,
+    evidenceBundleHash: bundle.evidenceBundleHash,
+    snapshotId: bundle.snapshot.id,
+    changed,
+  };
+}
+
 function assertBinding(obligation: {
   agreementHash: string;
   policyHash: string;

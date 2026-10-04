@@ -11,6 +11,7 @@ import { accountRouter } from "./routes/account";
 import { authRouter } from "./routes/auth";
 import { commercialRouter } from "./routes/commercial";
 import { disputesRouter } from "./routes/disputes";
+import { evidenceRouter } from "./routes/evidence";
 import { invitationsRouter } from "./routes/invitations";
 import { workspaceRouter } from "./routes/workspace";
 
@@ -63,6 +64,7 @@ export function createApiRouter(): Router {
   // organization membership stays in the individual handlers.
   api.use(workspaceRouter);
   api.use(commercialRouter);
+  api.use(evidenceRouter);
   api.use(disputesRouter);
   api.use(accountRouter);
 

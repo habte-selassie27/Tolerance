@@ -11,9 +11,11 @@ import {
 } from "../../server/dispute-workflow";
 import {
   genLayerSubmissionMode,
+  pollGenLayerSubmissionStatus,
   requestGenLayerCaseSubmission,
   submitGenLayerCase,
 } from "../../server/genlayer-submission";
+import { observeGenLayerResolution } from "../../server/resolution-observation";
 import {
   requireSession,
   requireWorkflowAccess,
@@ -157,5 +159,50 @@ disputesRouter.post(
       await submitGenLayerCase(actor.id, routeParam(request, "workflowId"));
     }
     response.json({ ok: true });
+  },
+);
+
+disputesRouter.post(
+  "/disputes/:workflowId/poll",
+  requireSession,
+  async (request, response) => {
+    const actor = await requireUser();
+    const result = await pollGenLayerSubmissionStatus(
+      actor.id,
+      routeParam(request, "workflowId"),
+    );
+    response.json({
+      ok: true,
+      workflowId: result.workflow.id,
+      workflowStatus: result.workflow.workflowStatus,
+      submissionState: result.workflow.submissionState,
+      lastStatus: result.workflow.lastStatus,
+      failureCode: result.workflow.failureCode,
+      status: result.status,
+    });
+  },
+);
+
+disputesRouter.post(
+  "/disputes/:workflowId/observe",
+  requireSession,
+  async (request, response) => {
+    const actor = await requireUser();
+    const workflowId = routeParam(request, "workflowId");
+    const result = await observeGenLayerResolution(actor.id, workflowId);
+    response.json({
+      ok: true,
+      reused: result.reused,
+      workflowId,
+      observation: {
+        id: result.observation.id,
+        verdict: result.observation.verdict,
+        verificationLevel: result.observation.verificationLevel,
+        resultHash: result.observation.resultHash,
+        disputePacketHash: result.observation.disputePacketHash,
+        genLayerTxHash: result.observation.genLayerTxHash,
+        observedAt: result.observation.observedAt,
+      },
+    });
   },
 );
