@@ -15,6 +15,26 @@ import {
   ProtocolVersionError,
 } from "../src/server/protocol-versioning";
 
+/**
+ * Resolves a Python 3 interpreter that can import `genlayer`. Hosts differ on
+ * whether the unversioned `python` name exists, so probe rather than assume.
+ */
+const pythonInterpreter = () => {
+  for (const candidate of [process.env.PYTHON, "python3", "python"].filter(
+    (name): name is string => Boolean(name),
+  )) {
+    try {
+      execFileSync(candidate, ["--version"], { stdio: "ignore" });
+      return candidate;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  throw new Error(
+    "No Python 3 interpreter found; set PYTHON to run the V2 hash parity check.",
+  );
+};
+
 const bytes = (fill: string) => `0x${fill.repeat(64)}` as `0x${string}`;
 const source = () => {
   const policy = hashEvidenceAuthorityPolicyV1({
@@ -153,7 +173,7 @@ describe("Tolerance V2 protocol isolation", () => {
     };
     const payload = JSON.stringify([item]);
     const python = execFileSync(
-      "python",
+      pythonInterpreter(),
       [
         "-c",
         "import json,sys; from genlayer.schemas.v2 import hash_source_verification_v1; print(hash_source_verification_v1(json.loads(sys.argv[1])))",

@@ -87,7 +87,8 @@ pnpm exec prisma validate
 pnpm exec prisma migrate status
 pnpm test:e2e
 pnpm test:e2e:rc3-mail
-.\.venv-genlayer\Scripts\python.exe -m pytest genlayer\tests\direct -v
+# with .venv-genlayer active
+python -m pytest genlayer/tests/direct -v
 forge test
 ```
 
@@ -107,4 +108,4 @@ The public web application is deployed separately from the persistent GenLayer C
 - Testnet RPC finality may be delayed or unavailable. The product shows reconciliation states and never blindly repeats an external transaction.
 - The fast path's `proposeFastOutcome` call requires an EIP-712 authorization from the frozen on-chain adjudicator role. The ordinary Vercel application intentionally does not hold that signer; proposal generation remains unavailable until isolated adjudicator custody is provisioned. Challenge and uncontested finalization controls render from verified persisted state.
 
-For architecture detail, start with [Phase 3C6](docs/architecture/PHASE_3C6_PRODUCT_UI.md) and the phase documents under `docs/architecture/`.
+For architecture detail, start with the [architecture decisions](docs/architecture/ARCHITECTURE_DECISION_RECORD.md) and the [domain model](docs/architecture/DOMAIN_MODEL.md); the current tree is under `docs/architecture/`. Superseded phase build records are archived as chaptered files under `docs/history/`.

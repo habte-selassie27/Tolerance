@@ -6,11 +6,15 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const vitest = fileURLToPath(
   new URL("../node_modules/vitest/vitest.mjs", import.meta.url),
 );
-const python = fileURLToPath(
-  new URL("../.venv-genlayer/Scripts/python.exe", import.meta.url),
-);
+// A venv lays its interpreter out differently per platform, so probe both
+// layouts rather than assuming one.
+const python = ["Scripts/python.exe", "bin/python3", "bin/python"]
+  .map((relative) =>
+    fileURLToPath(new URL(`../.venv-genlayer/${relative}`, import.meta.url)),
+  )
+  .find((candidate) => existsSync(candidate));
 
-if (!existsSync(python)) {
+if (!python) {
   console.error(
     "Phase 3B2C Direct Mode requires .venv-genlayer with Python 3.12.",
   );

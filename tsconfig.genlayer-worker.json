@@ -22,7 +22,6 @@
     "src/server/dispute-workflow.ts",
     "src/server/genlayer-submission.ts",
     "src/server/judge-v2-synthetic-proof.ts",
-    "src/server/dispute-packet-v2.ts",
     "genlayer/schemas/v2.ts",
     "genlayer/schemas/dispute-packet.ts"
   ],
