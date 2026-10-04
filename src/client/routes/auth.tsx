@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Link, redirect, useFetcher, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
@@ -126,12 +127,18 @@ export function AuthForm({
           </span>
           {setsPassword && (
             <span className="password-strength" aria-hidden="true">
-              <span className="password-strength-bars" data-level={strength.score}>
+              <span
+                className="password-strength-bars"
+                data-level={strength.score}
+              >
                 {[0, 1, 2, 3].map((index) => (
                   <i key={index} data-on={index < strength.score} />
                 ))}
               </span>
-              <span className="password-strength-label" data-level={strength.score}>
+              <span
+                className="password-strength-label"
+                data-level={strength.score}
+              >
                 {strength.label}
               </span>
             </span>
@@ -158,9 +165,7 @@ export function AuthForm({
           <PasswordRule met={password.length >= 8}>
             At least 8 characters
           </PasswordRule>
-          <PasswordRule
-            met={/[A-Za-z]/.test(password) && /\d/.test(password)}
-          >
+          <PasswordRule met={/[A-Za-z]/.test(password) && /\d/.test(password)}>
             A letter and a number
           </PasswordRule>
           <PasswordRule met={password.length > 0 && password === confirmation}>

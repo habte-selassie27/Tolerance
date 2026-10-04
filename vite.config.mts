@@ -1,8 +1,10 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-const apiPort = process.env.PORT ?? "3001";
-const webPort = Number(process.env.WEB_PORT ?? 3000);
+import { DEFAULT_API_PORT, DEFAULT_WEB_PORT } from "./src/config/ports";
+
+const apiPort = process.env.PORT ?? String(DEFAULT_API_PORT);
+const webPort = Number(process.env.WEB_PORT ?? DEFAULT_WEB_PORT);
 const apiTarget = `http://127.0.0.1:${apiPort}`;
 
 export default defineConfig({
