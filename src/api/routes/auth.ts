@@ -3,7 +3,7 @@ import { Router } from "express";
 
 import { validateSignupInput, validNewPassword } from "../../lib/auth-input";
 import { createServerSupabaseClient } from "../../lib/supabase/server";
-import { appOrigin, safeNextPath } from "../origin";
+import { appOrigin, safeNextPath } from "../app";
 
 export const authRouter: Router = Router();
 

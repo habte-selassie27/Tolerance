@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { ReactNode } from "react";
-import { Brand } from "./brand";
+
+import { Brand } from "./primitives";
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (

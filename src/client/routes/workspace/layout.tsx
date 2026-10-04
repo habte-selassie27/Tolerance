@@ -2,16 +2,10 @@ import { Suspense } from "react";
 import { Outlet, redirect, useLoaderData, useLocation } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
-import RouteLoading from "../../components/route-loading";
+import { RouteLoading } from "../../components/feedback";
 import { WorkspaceNav } from "../../components/workspace-nav";
 import { apiLoad, ApiRequestError, jsonBody, submit } from "../../lib/api";
-
-type WorkspaceShell = {
-  organization: string;
-  user: string;
-  wallet: string | null;
-  needsOnboarding: boolean;
-};
+import type { WorkspaceShell } from "../../../lib/api-types";
 
 /**
  * The session prefilter for the workspace. A missing session is the only case

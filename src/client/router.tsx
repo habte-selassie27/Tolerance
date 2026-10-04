@@ -1,49 +1,40 @@
 import type { RouteObject } from "react-router";
 import { createBrowserRouter } from "react-router";
 
-import RouteError from "./components/route-error";
-import DemoRoute from "./routes/demo";
-import ForgotPasswordRoute, {
-  action as forgotPasswordAction,
-} from "./routes/forgot-password";
-import HomeRoute from "./routes/home";
+import { RouteError } from "./components/feedback";
+import {
+  ForgotPasswordRoute,
+  LoginRoute,
+  ResetPasswordRoute,
+  SignupRoute,
+  forgotPasswordAction,
+  loginAction,
+  loginLoader,
+  resetPasswordAction,
+  signupAction,
+  signupLoader,
+} from "./routes/auth";
 import InvitationRoute, {
   ErrorBoundary as InvitationErrorBoundary,
   loader as invitationLoader,
 } from "./routes/invite";
-import LoginRoute, {
-  action as loginAction,
-  loader as loginLoader,
-} from "./routes/login";
-import NotFoundRoute from "./routes/not-found";
-import ResetPasswordRoute, {
-  action as resetPasswordAction,
-} from "./routes/reset-password";
-import SignupRoute, {
-  action as signupAction,
-  loader as signupLoader,
-} from "./routes/signup";
-import AccountRoute, {
-  loader as accountLoader,
+import { DemoRoute, LandingRoute, NotFoundRoute } from "./routes/public";
+import {
+  AccountRoute,
+  ActivityRoute,
+  accountLoader,
+  activityLoader,
 } from "./routes/workspace/account";
-import ActivityRoute, {
-  loader as activityLoader,
-} from "./routes/workspace/activity";
-import DealRoute, {
-  action as dealAction,
-  loader as dealLoader,
-} from "./routes/workspace/deal";
-import DealsRoute, {
-  action as dealsAction,
-  loader as dealsLoader,
-} from "./routes/workspace/deals";
-import DisputeRoute, {
-  genlayerAction as disputeAction,
-  loader as disputeLoader,
-} from "./routes/workspace/dispute";
-import DisputesRoute, {
-  loader as disputesLoader,
-} from "./routes/workspace/disputes";
+import {
+  DealRoute,
+  DealsRoute,
+  ObligationRoute,
+  dealAction,
+  dealLoader,
+  dealsAction,
+  dealsLoader,
+  obligationLoader,
+} from "./routes/workspace/commercial";
 import WorkspaceHomeRoute, {
   loader as workspaceHomeLoader,
 } from "./routes/workspace/home";
@@ -51,19 +42,23 @@ import WorkspaceLayout, {
   action as workspaceAction,
   loader as workspaceLoader,
 } from "./routes/workspace/layout";
-import ObligationRoute, {
-  loader as obligationLoader,
-} from "./routes/workspace/obligation";
-import OnboardingRoute, {
-  action as onboardingAction,
-  loader as onboardingLoader,
+import {
+  OnboardingRoute,
+  onboardingAction,
+  onboardingLoader,
 } from "./routes/workspace/onboarding";
-import StartDisputeRoute, {
-  loader as startDisputeLoader,
-} from "./routes/workspace/start-dispute";
+import {
+  DisputeRoute,
+  DisputesRoute,
+  StartDisputeRoute,
+  disputeAction,
+  disputeLoader,
+  disputesLoader,
+  startDisputeLoader,
+} from "./routes/workspace/disputes";
 
 export const routes: RouteObject[] = [
-  { path: "/", element: <HomeRoute /> },
+  { path: "/", element: <LandingRoute /> },
   { path: "/demo", element: <DemoRoute /> },
   {
     path: "/login",
@@ -138,7 +133,11 @@ export const routes: RouteObject[] = [
         loader: disputeLoader,
         action: disputeAction,
       },
-      { path: "activity", element: <ActivityRoute />, loader: activityLoader },
+      {
+        path: "activity",
+        element: <ActivityRoute />,
+        loader: activityLoader,
+      },
       { path: "account", element: <AccountRoute />, loader: accountLoader },
       {
         path: "onboarding",

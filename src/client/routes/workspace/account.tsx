@@ -2,21 +2,66 @@ import { useState } from "react";
 import { useFetcher, useLoaderData, useRevalidator } from "react-router";
 
 import { apiLoad, jsonBody, submit } from "../../lib/api";
-import { WalletLinker } from "./wallet-linker";
+import { WalletLinker } from "./wallet";
+import type { AccountView, ActivityResponse } from "../../../lib/api-types";
 
-type AccountView = {
-  displayName: string | null;
-  email: string | null;
-  organizations: Array<{ id: string; name: string; role: string }>;
-  wallets: Array<{ id: string; address: string }>;
-};
+export function activityLoader() {
+  return apiLoad<ActivityResponse>("/api/activity");
+}
 
-export function loader() {
+export function ActivityRoute() {
+  const { events } = useLoaderData<typeof activityLoader>();
+  return (
+    <>
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">Audit trail</p>
+          <h1>Activity</h1>
+          <p>
+            A human-readable history of commercial evidence and protocol steps.
+          </p>
+        </div>
+      </header>
+      <section className="panel">
+        <div className="table-toolbar">
+          <strong>Chronological audit trail</strong>
+          <span className="muted">Latest 100 events</span>
+        </div>
+        <ul className="activity-list">
+          {events.length ? (
+            events.map((event) => (
+              <li key={event.id}>
+                <div>
+                  <strong>{humanEventAction(event.action)}</strong>
+                  <p>{humanTargetType(event.targetType)}</p>
+                </div>
+                <small>{new Date(event.createdAt).toLocaleString()}</small>
+              </li>
+            ))
+          ) : (
+            <li className="muted">No activity available.</li>
+          )}
+        </ul>
+      </section>
+    </>
+  );
+}
+
+function humanEventAction(value: string) {
+  const text = value.replaceAll("_", " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function humanTargetType(value: string) {
+  return value.replaceAll("_", " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+export function accountLoader() {
   return apiLoad<AccountView>("/api/account");
 }
 
-export default function AccountRoute() {
-  const account = useLoaderData<typeof loader>();
+export function AccountRoute() {
+  const account = useLoaderData<typeof accountLoader>();
   const revalidator = useRevalidator();
   const signOut = useFetcher();
   const [pendingWallet, setPendingWallet] = useState<string | null>(null);

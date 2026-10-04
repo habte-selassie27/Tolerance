@@ -3,24 +3,58 @@ import { join, resolve } from "node:path";
 import cookieParser from "cookie-parser";
 import express, { Router } from "express";
 
+import { parseServerEnvironment } from "../config/env";
+import { prisma } from "../lib/prisma";
 import { requestContext } from "./context";
 import { apiErrorHandler, notFoundHandler } from "./errors";
 import { accountRouter } from "./routes/account";
 import { authRouter } from "./routes/auth";
-import { dealsRouter } from "./routes/deals";
+import { commercialRouter } from "./routes/commercial";
 import { disputesRouter } from "./routes/disputes";
-import { healthRouter } from "./routes/health";
 import { invitationsRouter } from "./routes/invitations";
-import { obligationsRouter } from "./routes/obligations";
 import { workspaceRouter } from "./routes/workspace";
 
 const publicDirectory = resolve(process.cwd(), "dist/client");
+
+/**
+ * The public origin this deployment is reachable at. Used to build absolute
+ * Supabase redirect and counterparty invitation links.
+ */
+export function appOrigin() {
+  return (process.env.TOLERANCE_APP_ORIGIN ?? "http://localhost:3000").replace(
+    /\/$/,
+    "",
+  );
+}
+
+/** Only same-origin relative paths are accepted as post-authentication targets. */
+export function safeNextPath(
+  candidate: string | null | undefined,
+  fallback: string,
+) {
+  const next = candidate ?? "";
+  return next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+}
 
 export function createApiRouter(): Router {
   const api = Router();
   api.use(requestContext);
   api.use(cookieParser());
-  api.use(healthRouter);
+
+  /** A deliberately narrow readiness signal: never return configuration values. */
+  api.get("/health", async (_request, response) => {
+    try {
+      parseServerEnvironment(process.env);
+      await prisma.$queryRaw`SELECT 1`;
+      response.json({ status: "ready", database: "reachable" });
+    } catch {
+      response.status(503).json({
+        status: "not_ready",
+        database: "unavailable_or_misconfigured",
+      });
+    }
+  });
+
   api.use(authRouter);
   api.use(invitationsRouter);
 
@@ -28,8 +62,7 @@ export function createApiRouter(): Router {
   // that an unmatched path still reaches the JSON 404. Authorization against
   // organization membership stays in the individual handlers.
   api.use(workspaceRouter);
-  api.use(dealsRouter);
-  api.use(obligationsRouter);
+  api.use(commercialRouter);
   api.use(disputesRouter);
   api.use(accountRouter);
 

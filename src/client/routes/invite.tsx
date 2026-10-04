@@ -2,19 +2,10 @@ import { useState } from "react";
 import { Link, useLoaderData, useNavigate, useParams } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 
-import { AuthShell } from "../components/auth-shell";
-import { Brand } from "../components/brand";
+import { AuthShell } from "../components/auth";
+import { Brand } from "../components/primitives";
 import { apiLoad, errorMessage, jsonBody, submit } from "../lib/api";
-
-type InvitationView = {
-  deal: { id: string; title: string; reference: string };
-  invitingOrganizationName: string;
-  expiresAt: string;
-  viewer: {
-    signedIn: boolean;
-    organizations: Array<{ id: string; name: string }>;
-  };
-};
+import type { InvitationView } from "../../lib/api-types";
 
 export function loader({ params }: LoaderFunctionArgs) {
   return apiLoad<InvitationView>(`/api/invitations/${params.token}`);

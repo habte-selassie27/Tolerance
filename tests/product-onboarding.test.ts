@@ -23,7 +23,7 @@ describe("product onboarding and public demo", () => {
   });
 
   it("keeps the public demo synthetic, read-only, and outside the authenticated app", () => {
-    const demo = readFileSync("src/client/routes/demo.tsx", "utf8");
+    const demo = readFileSync("src/client/routes/public.tsx", "utf8");
     expect(demo).toContain("Synthetic read-only demo");
     expect(demo).toContain("not a live-chain transaction");
     expect(demo).not.toContain("use server");
@@ -31,7 +31,7 @@ describe("product onboarding and public demo", () => {
   });
 
   it("renders the required landing thesis and onboarding calls to action", () => {
-    const landing = readFileSync("src/client/routes/home.tsx", "utf8");
+    const landing = readFileSync("src/client/routes/public.tsx", "utf8");
     for (const text of [
       "Create workspace",
       "View demo",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useFetcher, useLocation } from "react-router";
-import { Brand } from "./brand";
+import { Brand } from "./primitives";
 
 const links = [
   ["Home", "/app"],

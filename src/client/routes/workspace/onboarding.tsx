@@ -2,9 +2,9 @@ import { Link, redirect, useFetcher, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import { apiLoad, formString, jsonBody, submit } from "../../lib/api";
-import { WalletLinker } from "./wallet-linker";
+import { WalletLinker } from "./wallet";
 
-export function loader({ request }: LoaderFunctionArgs) {
+export function onboardingLoader({ request }: LoaderFunctionArgs) {
   const next = new URL(request.url).searchParams.get("next") ?? undefined;
   return apiLoad<{ needsOnboarding: boolean }>("/api/workspace").then(
     (shell) => {
@@ -20,7 +20,7 @@ export function loader({ request }: LoaderFunctionArgs) {
   );
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function onboardingAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const result = await submit<{
     ok: boolean;
@@ -45,9 +45,9 @@ export async function action({ request }: ActionFunctionArgs) {
   );
 }
 
-export default function OnboardingRoute() {
-  const { next } = useLoaderData<typeof loader>();
-  const create = useFetcher<typeof action>();
+export function OnboardingRoute() {
+  const { next } = useLoaderData<typeof onboardingLoader>();
+  const create = useFetcher<typeof onboardingAction>();
   return (
     <section className="onboarding">
       <p className="eyebrow">First login</p>

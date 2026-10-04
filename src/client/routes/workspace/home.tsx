@@ -1,25 +1,8 @@
 import { Link, useLoaderData } from "react-router";
 
-import { StatusBadge } from "../../components/status-badge";
+import { StatusBadge } from "../../components/primitives";
 import { apiLoad } from "../../lib/api";
-
-type WorkspaceSummary =
-  | { needsOnboarding: true }
-  | {
-      needsOnboarding: false;
-      metrics: {
-        deals: number;
-        obligations: number;
-        awaitingWallet: number;
-        adjudications: number;
-      };
-      workflows: Array<{
-        id: string;
-        workflowStatus: string | null;
-        dealTitle: string;
-      }>;
-      events: Array<{ id: string; action: string; createdAt: string }>;
-    };
+import type { WorkspaceSummary } from "../../../lib/api-types";
 
 export function loader() {
   return apiLoad<WorkspaceSummary>("/api/workspace/summary");
