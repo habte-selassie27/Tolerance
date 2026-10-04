@@ -1,0 +1,876 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum OrganizationRole {
+  OWNER
+  MEMBER
+}
+
+enum DealStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum AgreementStatus {
+  DRAFT
+  APPROVED
+  SUPERSEDED
+}
+
+enum AmendmentStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  AGREEMENT
+  AMENDMENT
+  TECHNICAL_SPECIFICATION
+  INSPECTION_REPORT
+  SHIPMENT_EVIDENCE
+  OTHER_EVIDENCE
+}
+
+enum DocumentStatus {
+  PENDING
+  UPLOADED
+  READY_FOR_EXTRACTION
+  EXTRACTING
+  EXTRACTED
+  FAILED
+  OCR_REQUIRED
+  READY
+  REJECTED
+  DELETED
+}
+
+enum ObligationStatus {
+  PREPARED
+  OBSERVED
+  DISPUTED
+  SETTLED
+  REFUNDED
+  CANCELLED
+}
+
+/// Deployment identity is immutable once a commercial obligation exists.
+/// V1 rows retain their original V1 judge/escrow bindings.
+enum ProtocolVersion {
+  V1
+  V2
+}
+
+enum EvidenceStatus {
+  REGISTERED
+  LOCKED
+  SUPERSEDED
+}
+
+/// The provenance/authority of an evidence identity. This classifies who can
+/// stand behind a fact; it deliberately does not alter any frozen hash schema.
+enum EvidenceAuthorityLevel {
+  PARTY_UPLOADED
+  COUNTERPARTY_ACKNOWLEDGED
+  PREAGREED_EXTERNAL_SOURCE
+  THIRD_PARTY_SIGNED
+  ONCHAIN_VERIFIED
+  SERVER_FETCH_VERIFIED
+}
+
+enum EvidenceSourceMode {
+  PRIVATE_DOCUMENT
+  EXTERNAL_URL
+  THIRD_PARTY_SIGNED_DOCUMENT
+  ONCHAIN_RECORD
+}
+
+enum AdjudicationLifecycle {
+  SUBMITTED
+  PENDING
+  PROPOSING
+  COMMITTING
+  REVEALING
+  ACCEPTED
+  UNDETERMINED
+  FINALIZED
+  CANCELED
+}
+
+enum AiEvaluationStatus {
+  REQUESTED
+  SUCCEEDED_UNVALIDATED
+  VALIDATED
+  REJECTED
+  FAILED
+}
+
+enum DisputeWorkflowStatus {
+  PACKET_READY
+  XLAYER_BINDING_PENDING
+  XLAYER_DISPUTE_CONFIRMED
+  GENLAYER_SUBMISSION_PENDING
+  GENLAYER_SUBMITTED
+  GENLAYER_FINALIZED
+  ATTESTATION_BLOCKED
+  ATTESTATION_PENDING
+  ATTESTATION_READY
+  SETTLEMENT_PENDING
+  SETTLEMENT_SUBMITTED
+  SETTLED
+  REFUNDED
+  SETTLEMENT_UNKNOWN
+  GENLAYER_SUBMISSION_UNKNOWN
+  REVIEW_REQUIRED
+}
+
+enum ResolutionVerificationLevel {
+  FINALIZED_STATE_VERIFIED
+  ATTESTATION_ELIGIBLE
+}
+
+enum AttestationRoundStatus {
+  BLOCKED
+  OPEN
+  THRESHOLD_REACHED
+  EXPIRED
+  CANCELED
+}
+
+enum SettlementExecutionStatus {
+  INTENT_CREATED
+  DISPATCHING
+  SUBMITTED
+  FINALIZED
+  FAILED_BEFORE_SEND
+  SETTLEMENT_UNKNOWN
+  REVIEW_REQUIRED
+}
+
+enum DealParticipantRole {
+  BUYER
+  SUPPLIER
+}
+
+enum DealInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum ProtocolActionStatus {
+  PREPARED
+  SUBMITTED
+  CONFIRMED
+  FAILED
+  UNKNOWN
+}
+
+enum GenLayerSubmissionState {
+  INTENT_CREATED
+  DISPATCHING
+  SUBMITTED
+  FAILED_BEFORE_SEND
+  UNKNOWN
+  REVIEW_REQUIRED
+}
+
+/// Lifecycle for the deliberately isolated RC5B2.5 JudgeV2 fetch proof.
+/// This is not a commercial workflow and has no X Layer obligation relation.
+enum JudgeV2SyntheticProofStatus {
+  INTENT_CREATED
+  DISPATCHING
+  SUBMITTED
+  FINALIZED
+  FAILED_BEFORE_SEND
+  UNKNOWN
+  REVIEW_REQUIRED
+}
+
+model User {
+  id                       String                             @id @default(uuid())
+  authSubject              String                             @unique
+  email                    String?                            @unique
+  displayName              String?
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
+  memberships              OrganizationMember[]
+  wallets                  WalletAccount[]
+  walletChallenges         WalletChallenge[]
+  documents                Document[]
+  auditEvents              AuditEvent[]
+  createdDeals             Deal[]                             @relation("DealCreator")
+  createdAgreements        Agreement[]                        @relation("AgreementCreator")
+  createdObligations       Obligation[]                       @relation("ObligationCreator")
+  requestedAdjudications   AdjudicationCase[]                 @relation("AdjudicationRequester")
+  dealInvitations          DealInvitation[]                   @relation("DealInvitationCreator")
+  protocolActions          ProtocolActionIntent[]
+  evidenceAcknowledgements EvidenceAuthorityAcknowledgement[]
+}
+
+model WalletAccount {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chainFamily        String
+  network            String
+  address            String
+  normalizedAddress  String
+  verificationStatus String   @default("UNVERIFIED")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([chainFamily, network, normalizedAddress])
+}
+
+model WalletChallenge {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  normalizedAddress String
+  nonce             String    @unique
+  message           String
+  expiresAt         DateTime
+  usedAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model Organization {
+  id                       String                             @id @default(uuid())
+  name                     String
+  slug                     String                             @unique
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
+  members                  OrganizationMember[]
+  deals                    Deal[]
+  auditEvents              AuditEvent[]
+  dealParticipations       DealParticipant[]
+  sentDealInvitations      DealInvitation[]                   @relation("InvitationSenderOrganization")
+  evidenceAcknowledgements EvidenceAuthorityAcknowledgement[]
+}
+
+model OrganizationMember {
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, userId])
+}
+
+model Deal {
+  id                      String            @id @default(uuid())
+  organizationId          String
+  reference               String
+  title                   String
+  buyerOrganizationRef    String
+  supplierOrganizationRef String
+  status                  DealStatus        @default(DRAFT)
+  createdById             String
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  organization            Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy               User              @relation("DealCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  agreements              Agreement[]
+  documents               Document[]
+  obligations             Obligation[]
+  participants            DealParticipant[]
+  invitations             DealInvitation[]
+
+  @@unique([organizationId, reference])
+}
+
+model DealParticipant {
+  dealId         String
+  organizationId String
+  role           DealParticipantRole
+  acceptedAt     DateTime            @default(now())
+  deal           Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@id([dealId, organizationId])
+  @@unique([dealId, role])
+  @@index([organizationId])
+}
+
+model DealInvitation {
+  id                       String               @id @default(uuid())
+  dealId                   String
+  invitingOrganizationId   String
+  createdById              String
+  intendedEmail            String
+  tokenHash                String               @unique
+  role                     DealParticipantRole
+  status                   DealInvitationStatus @default(PENDING)
+  expiresAt                DateTime
+  acceptedAt               DateTime?
+  acceptedByOrganizationId String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  deal                     Deal                 @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  invitingOrganization     Organization         @relation("InvitationSenderOrganization", fields: [invitingOrganizationId], references: [id], onDelete: Restrict)
+  createdBy                User                 @relation("DealInvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([dealId, status])
+  @@index([intendedEmail, status])
+}
+
+model Agreement {
+  id                    String          @id @default(uuid())
+  dealId                String
+  version               Int
+  status                AgreementStatus @default(DRAFT)
+  documentId            String?
+  agreementHash         String
+  effectiveAt           DateTime?
+  supersedesAgreementId String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  deal                  Deal            @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  document              Document?       @relation("AgreementDocument", fields: [documentId], references: [id], onDelete: SetNull)
+  createdById           String
+  createdBy             User            @relation("AgreementCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  supersedes            Agreement?      @relation("AgreementLineage", fields: [supersedesAgreementId], references: [id])
+  successors            Agreement[]     @relation("AgreementLineage")
+  amendments            Amendment[]
+  obligations           Obligation[]
+
+  @@unique([dealId, version])
+  @@unique([dealId, agreementHash])
+}
+
+model Amendment {
+  id            String          @id @default(uuid())
+  agreementId   String
+  version       Int
+  amendmentHash String
+  documentId    String?
+  status        AmendmentStatus @default(DRAFT)
+  precedence    Int
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  agreement     Agreement       @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  document      Document?       @relation("AmendmentDocument", fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([agreementId, version])
+}
+
+model Obligation {
+  id                       String                             @id @default(uuid())
+  dealId                   String
+  agreementId              String
+  localStatus              ObligationStatus                   @default(PREPARED)
+  protocolVersion          ProtocolVersion                    @default(V1)
+  packetVersion            Int                                @default(1)
+  genLayerJudge            String?
+  createdById              String
+  buyerWallet              String
+  supplierWallet           String
+  amount                   Decimal                            @db.Decimal(78, 0)
+  tokenAddress             String
+  tokenDecimals            Int
+  xLayerChainId            Int
+  xLayerEscrow             String
+  xLayerObligationId       String
+  toleranceCaseId           String                             @unique
+  agreementHash            String
+  policyHash               String
+  evidenceRoot             String?
+  disputePacketHash        String?
+  observedOnchainState     String?
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
+  deal                     Deal                               @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  agreement                Agreement                          @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  createdBy                User                               @relation("ObligationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  requirements             Requirement[]
+  evidence                 Evidence[]
+  adjudicationCases        AdjudicationCase[]
+  protocolEvents           ProtocolEvent[]
+  evidenceBundles          EvidenceBundleSnapshot[]
+  evaluationContexts       EvaluationContextSnapshot[]
+  aiEvaluationRuns         AiEvaluationRun[]
+  aiEvaluationSnapshots    AiEvaluationSnapshot[]
+  disputePacketSnapshots   DisputePacketSnapshot[]
+  protocolActions          ProtocolActionIntent[]
+  evidenceSourcePolicies   EvidenceSourcePolicy[]
+  evidenceAcknowledgements EvidenceAuthorityAcknowledgement[]
+
+  @@unique([xLayerChainId, xLayerEscrow, xLayerObligationId])
+}
+
+model ProtocolActionIntent {
+  id              String               @id @default(uuid())
+  obligationId    String
+  requestedById   String
+  action          String
+  expectedState   String
+  transactionHash String?              @unique
+  status          ProtocolActionStatus @default(PREPARED)
+  calldataHash    String
+  submittedAt     DateTime?
+  confirmedAt     DateTime?
+  failureCode     String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  obligation      Obligation           @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  requestedBy     User                 @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@unique([obligationId, action, expectedState])
+  @@index([status, updatedAt])
+}
+
+model Requirement {
+  id                   String                   @id @default(uuid())
+  obligationId         String
+  requirementKey       String
+  title                String
+  description          String
+  category             String
+  governingSourceRef   String
+  acceptanceCriteria   String
+  evidenceExpectations String
+  required             Boolean                  @default(true)
+  ordering             Int
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  obligation           Obligation               @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evidenceLinks        EvidenceRequirement[]
+  governingSources     RequirementSourceBlock[]
+  evidenceSourcePolicy EvidenceSourcePolicy?
+
+  @@unique([obligationId, requirementKey])
+}
+
+model Document {
+  id                    String         @id @default(uuid())
+  dealId                String
+  uploadedById          String
+  documentType          DocumentType
+  originalFilename      String
+  mimeType              String
+  byteSize              Int
+  contentHash           String
+  storageObjectKey      String         @unique
+  status                DocumentStatus @default(PENDING)
+  pageCount             Int?
+  extractorVersion      String?
+  processingError       String?
+  extractionStartedAt   DateTime?
+  extractionCompletedAt DateTime?
+  createdAt             DateTime       @default(now())
+  deal                  Deal           @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  uploadedBy            User           @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  sourceBlocks          SourceBlock[]
+  evidence              Evidence[]
+  agreements            Agreement[]    @relation("AgreementDocument")
+  amendments            Amendment[]    @relation("AmendmentDocument")
+
+  @@unique([dealId, contentHash])
+}
+
+model SourceBlock {
+  id                   String                   @id @default(uuid())
+  documentId           String
+  pageNumber           Int?
+  blockOrder           Int
+  normalizedText       String
+  sourceLocator        String
+  contentHash          String
+  extractionVersion    String
+  createdAt            DateTime                 @default(now())
+  document             Document                 @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  evidence             Evidence[]
+  requirementLinks     RequirementSourceBlock[]
+  evidenceSourceBlocks EvidenceSourceBlock[]
+
+  @@unique([documentId, extractionVersion, blockOrder])
+}
+
+model RequirementSourceBlock {
+  requirementId String
+  sourceBlockId String
+  precedence    Int         @default(0)
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  sourceBlock   SourceBlock @relation(fields: [sourceBlockId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, sourceBlockId])
+}
+
+model Evidence {
+  id               String                             @id @default(uuid())
+  obligationId     String
+  documentId       String?
+  sourceBlockId    String?
+  contentHash      String
+  bundleHash       String
+  status           EvidenceStatus                     @default(REGISTERED)
+  authorityLevel   EvidenceAuthorityLevel             @default(PARTY_UPLOADED)
+  createdAt        DateTime                           @default(now())
+  obligation       Obligation                         @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  document         Document?                          @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  sourceBlock      SourceBlock?                       @relation(fields: [sourceBlockId], references: [id], onDelete: SetNull)
+  requirementLinks EvidenceRequirement[]
+  sourceLinks      EvidenceSourceBlock[]
+  acknowledgements EvidenceAuthorityAcknowledgement[]
+
+  @@unique([obligationId, contentHash])
+}
+
+/// Server-owned, pre-dispute source rules. They are frozen when the matching
+/// X Layer obligation is observed as created and are never folded into an
+/// existing policyHash.
+model EvidenceSourcePolicy {
+  id                                  String                 @id @default(uuid())
+  obligationId                        String
+  requirementId                       String                 @unique
+  policyVersion                       String                 @default("1")
+  sourceMode                          EvidenceSourceMode
+  minimumAuthority                    EvidenceAuthorityLevel
+  allowedDomain                       String?
+  exactUrl                            String?
+  urlPattern                          String?
+  expectedIssuer                      String?
+  expectedDocumentType                DocumentType?
+  counterpartyAcknowledgementRequired Boolean                @default(false)
+  thirdPartySignatureRequired         Boolean                @default(false)
+  validatorFetchIntended              Boolean                @default(false)
+  sourcePolicyHash                    String?
+  canonicalSourceUrl                  String?
+  expectedContentHash                 String?
+  expectedContentType                 String?
+  extractionRule                      String?
+  frozenAt                            DateTime?
+  createdAt                           DateTime               @default(now())
+  updatedAt                           DateTime               @updatedAt
+  obligation                          Obligation             @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  requirement                         Requirement            @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([obligationId, frozenAt])
+}
+
+/// Immutable acknowledgement of one exact evidence/document hash. A future
+/// document version necessarily creates a distinct Evidence row and cannot
+/// inherit this acknowledgement.
+model EvidenceAuthorityAcknowledgement {
+  id                          String       @id @default(uuid())
+  obligationId                String
+  evidenceId                  String
+  documentContentHash         String
+  acknowledgingOrganizationId String
+  acknowledgingUserId         String
+  authorityVersion            String       @default("1")
+  createdAt                   DateTime     @default(now())
+  obligation                  Obligation   @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evidence                    Evidence     @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  acknowledgingOrganization   Organization @relation(fields: [acknowledgingOrganizationId], references: [id], onDelete: Restrict)
+  acknowledgingUser           User         @relation(fields: [acknowledgingUserId], references: [id], onDelete: Restrict)
+
+  @@unique([evidenceId, acknowledgingOrganizationId])
+  @@index([obligationId, evidenceId])
+  @@index([acknowledgingUserId])
+}
+
+model EvidenceSourceBlock {
+  evidenceId    String
+  sourceBlockId String
+  evidence      Evidence    @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  sourceBlock   SourceBlock @relation(fields: [sourceBlockId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, sourceBlockId])
+}
+
+model EvidenceBundleSnapshot {
+  id                         String                      @id @default(uuid())
+  obligationId               String
+  schemaVersion              String
+  evidenceBundleHash         String
+  evidenceRoot               String
+  canonicalJson              String
+  createdAt                  DateTime                    @default(now())
+  obligation                 Obligation                  @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evaluationContextSnapshots EvaluationContextSnapshot[]
+  disputePacketSnapshots     DisputePacketSnapshot[]
+
+  @@unique([obligationId, evidenceBundleHash])
+  @@unique([obligationId, evidenceRoot])
+}
+
+model EvaluationContextSnapshot {
+  id                     String                  @id @default(uuid())
+  obligationId           String
+  evidenceBundleId       String
+  schemaVersion          String
+  policyVersion          String
+  evaluationContextHash  String
+  canonicalJson          String
+  createdAt              DateTime                @default(now())
+  obligation             Obligation              @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evidenceBundle         EvidenceBundleSnapshot  @relation(fields: [evidenceBundleId], references: [id], onDelete: Cascade)
+  aiEvaluationRuns       AiEvaluationRun[]
+  aiEvaluationSnapshots  AiEvaluationSnapshot[]
+  disputePacketSnapshots DisputePacketSnapshot[]
+
+  @@unique([evidenceBundleId, evaluationContextHash])
+}
+
+model AiEvaluationRun {
+  id                    String                    @id @default(uuid())
+  obligationId          String
+  evaluationContextId   String
+  evaluationContextHash String
+  requestSchemaVersion  String
+  provider              String
+  model                 String
+  idempotencyKey        String
+  status                AiEvaluationStatus        @default(REQUESTED)
+  failureCode           String?
+  latencyMs             Int?
+  inputTokens           Int?
+  outputTokens          Int?
+  createdAt             DateTime                  @default(now())
+  completedAt           DateTime?
+  obligation            Obligation                @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evaluationContext     EvaluationContextSnapshot @relation(fields: [evaluationContextId], references: [id], onDelete: Cascade)
+  snapshot              AiEvaluationSnapshot?
+
+  @@unique([evaluationContextId, provider, model, requestSchemaVersion, idempotencyKey])
+}
+
+model AiEvaluationSnapshot {
+  id                     String                    @id @default(uuid())
+  obligationId           String
+  evaluationContextId    String
+  evaluationRunId        String                    @unique
+  schemaVersion          String
+  evaluationContextHash  String
+  validatorVersion       String
+  evaluation             Json
+  createdAt              DateTime                  @default(now())
+  obligation             Obligation                @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evaluationContext      EvaluationContextSnapshot @relation(fields: [evaluationContextId], references: [id], onDelete: Cascade)
+  evaluationRun          AiEvaluationRun           @relation(fields: [evaluationRunId], references: [id], onDelete: Cascade)
+  disputePacketSnapshots DisputePacketSnapshot[]
+
+  @@unique([evaluationContextId, evaluationContextHash])
+}
+
+model DisputePacketSnapshot {
+  id                  String                    @id @default(uuid())
+  obligationId        String
+  evidenceBundleId    String
+  evaluationContextId String
+  aiEvaluationId      String
+  schemaVersion       String
+  caseId              String
+  disputePacketHash   String
+  canonicalJson       String
+  createdAt           DateTime                  @default(now())
+  obligation          Obligation                @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  evidenceBundle      EvidenceBundleSnapshot    @relation(fields: [evidenceBundleId], references: [id], onDelete: Cascade)
+  evaluationContext   EvaluationContextSnapshot @relation(fields: [evaluationContextId], references: [id], onDelete: Cascade)
+  aiEvaluation        AiEvaluationSnapshot      @relation(fields: [aiEvaluationId], references: [id], onDelete: Cascade)
+  adjudicationCases   AdjudicationCase[]
+
+  @@unique([aiEvaluationId, disputePacketHash])
+}
+
+model EvidenceRequirement {
+  evidenceId    String
+  requirementId String
+  evidence      Evidence    @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, requirementId])
+}
+
+model AdjudicationCase {
+  id                       String                   @id @default(uuid())
+  obligationId             String
+  disputePacketSnapshotId  String?
+  requestedById            String?
+  caseId                   String                   @unique
+  disputePacketHash        String
+  judgeAddress             String
+  genLayerChainId          Int
+  submissionTxHash         String?                  @unique
+  submissionRequestId      String?                  @unique
+  submissionState          GenLayerSubmissionState?
+  submissionRequestedAt    DateTime?
+  submissionDispatchAt     DateTime?
+  submissionSubmittedAt    DateTime?
+  lastStatus               String?
+  lifecycle                AdjudicationLifecycle?
+  workflowStatus           DisputeWorkflowStatus?
+  workflowVersion          Int                      @default(0)
+  xLayerDisputeTxHash      String?                  @unique
+  xLayerDisputeConfirmedAt DateTime?
+  lastObservedAt           DateTime?
+  failureCode              String?
+  nextAttemptAt            DateTime?
+  finalizedVerdict         String?
+  finalizedResultHash      String?
+  resolutionObservation    ResolutionObservation?
+  attestationRounds        AttestationRound[]
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  obligation               Obligation               @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  disputePacketSnapshot    DisputePacketSnapshot?   @relation(fields: [disputePacketSnapshotId], references: [id], onDelete: Restrict)
+  requestedBy              User?                    @relation("AdjudicationRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@unique([obligationId, disputePacketSnapshotId])
+  @@index([workflowStatus])
+  @@index([disputePacketSnapshotId])
+  @@index([submissionState, nextAttemptAt])
+}
+
+/// A server-created, durable proof intent for the deployed JudgeV2 only.
+/// It is intentionally separate from AdjudicationCase so it can never be
+/// mistaken for, or advance, an economically active commercial obligation.
+model JudgeV2SyntheticProof {
+  id                     String                      @id @default(uuid())
+  protocolVersion        ProtocolVersion             @default(V2)
+  purpose                String                      @default("JUDGEV2_SYNTHETIC_PROOF")
+  caseId                 String                      @unique
+  judgeAddress           String
+  canonicalPacket        String
+  disputePacketHash      String
+  packetByteLength       Int
+  packetSha256           String
+  sourcePolicyHash       String
+  canonicalSourceUrl     String
+  expectedContentHash    String?
+  expectedExtractHash    String?
+  sourcePolicyFrozenAt   DateTime                    @default(now())
+  status                 JudgeV2SyntheticProofStatus @default(INTENT_CREATED)
+  submissionTxHash       String?                     @unique
+  submissionRequestedAt  DateTime                    @default(now())
+  submissionDispatchAt   DateTime?
+  submissionSubmittedAt  DateTime?
+  finalizedAt            DateTime?
+  sourceVerificationHash String?
+  verdict                String?
+  resolvedCase           Json?
+  failureCode            String?
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+
+  @@index([status, submissionRequestedAt])
+}
+
+model ResolutionObservation {
+  id                 String                      @id @default(uuid())
+  adjudicationCaseId String                      @unique
+  genLayerTxHash     String                      @unique
+  caseId             String
+  judgeAddress       String
+  genLayerChainId    Int
+  disputePacketHash  String
+  agreementHash      String
+  policyHash         String
+  evidenceRoot       String
+  canonicalJson      String
+  resultHash         String
+  verdict            String
+  observerVersion    String
+  verificationLevel  ResolutionVerificationLevel
+  observedAt         DateTime                    @default(now())
+  adjudicationCase   AdjudicationCase            @relation(fields: [adjudicationCaseId], references: [id], onDelete: Cascade)
+  attestationRounds  AttestationRound[]
+
+  @@unique([caseId, resultHash])
+  @@index([verificationLevel])
+}
+
+model AttestationRound {
+  id                      String                 @id @default(uuid())
+  adjudicationCaseId      String
+  resolutionObservationId String
+  payloadVersion          String
+  canonicalPayload        String
+  digest                  String                 @unique
+  nonce                   String
+  expiry                  DateTime
+  threshold               Int
+  allowedSigners          Json
+  status                  AttestationRoundStatus
+  createdAt               DateTime               @default(now())
+  completedAt             DateTime?
+  adjudicationCase        AdjudicationCase       @relation(fields: [adjudicationCaseId], references: [id], onDelete: Cascade)
+  resolutionObservation   ResolutionObservation  @relation(fields: [resolutionObservationId], references: [id], onDelete: Cascade)
+  signatures              AttestationSignature[]
+  settlementExecution     SettlementExecution?
+
+  @@unique([resolutionObservationId, payloadVersion])
+  @@index([status, expiry])
+}
+
+model AttestationSignature {
+  id         String           @id @default(uuid())
+  roundId    String
+  signer     String
+  signature  String
+  verifiedAt DateTime         @default(now())
+  createdAt  DateTime         @default(now())
+  round      AttestationRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, signer])
+}
+
+model SettlementExecution {
+  id                 String                    @id @default(uuid())
+  attestationRoundId String                    @unique
+  transactionHash    String?                   @unique
+  status             SettlementExecutionStatus
+  requestedAt        DateTime                  @default(now())
+  submittedAt        DateTime?
+  finalizedAt        DateTime?
+  finalizedBlock     BigInt?
+  finalEscrowState   String?
+  failureCode        String?
+  nextAttemptAt      DateTime?
+  attestationRound   AttestationRound          @relation(fields: [attestationRoundId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+}
+
+model ProtocolEvent {
+  id            String     @id @default(uuid())
+  obligationId  String
+  txHash        String
+  eventType     String
+  observedState String
+  blockNumber   BigInt?
+  createdAt     DateTime   @default(now())
+  obligation    Obligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+
+  @@unique([txHash, eventType])
+}
+
+model AuditEvent {
+  id             String       @id @default(uuid())
+  actorId        String?
+  organizationId String
+  action         String
+  targetType     String
+  targetId       String
+  metadata       Json
+  createdAt      DateTime     @default(now())
+  actor          User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+}
