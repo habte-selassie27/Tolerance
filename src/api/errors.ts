@@ -1,12 +1,12 @@
 import type { ErrorRequestHandler, Request, RequestHandler } from "express";
 import { ZodError } from "zod";
 
-import { AuthorizationError } from "../server/authorization";
-import { DealInvitationError } from "../server/deal-invitations";
+import { AuthorizationError } from "../server/auth";
+import { DealInvitationError } from "../server/counterparty";
 import { DisputePacketError } from "../server/dispute-packet";
 import { DisputeWorkflowError } from "../server/dispute-workflow";
 import { EvidenceAuthorityError } from "../server/evidence-authority";
-import { WalletOwnershipError } from "../server/wallet-ownership";
+import { WalletOwnershipError } from "../server/counterparty";
 import { CommercialLifecycleError } from "../server/xlayer-obligation-lifecycle";
 
 export class ApiError extends Error {

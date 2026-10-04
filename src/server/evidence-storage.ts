@@ -1,9 +1,9 @@
 import "server-only";
 
 import { prisma } from "../lib/prisma";
-import { createSupabaseAdminClient } from "../lib/supabase/admin";
+import { createSupabaseAdminClient } from "../lib/supabase";
 import { guards, requireUser } from "./auth";
-import { createOpaqueStorageKey, validateUploadBytes } from "./validation";
+import { createOpaqueStorageKey, validateUploadBytes } from "./auth";
 
 export const EVIDENCE_BUCKET = "tolerance-private-evidence";
 

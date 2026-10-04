@@ -7,7 +7,7 @@ import {
   createWalletChallenge,
   unlinkWallet,
   verifyWalletChallenge,
-} from "../../server/wallet-ownership";
+} from "../../server/counterparty";
 import { requireUser } from "../../server/auth";
 import { requireSession, workspaceActor } from "../workspace";
 

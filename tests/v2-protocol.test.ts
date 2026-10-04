@@ -13,7 +13,7 @@ import { deploymentForProtocol } from "../src/config/protocol";
 import {
   judgeForSubmission,
   ProtocolVersionError,
-} from "../src/server/protocol-versioning";
+} from "../src/server/agreements";
 
 /**
  * Resolves a Python 3 interpreter that can import `genlayer`. Hosts differ on

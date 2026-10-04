@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "../../lib/prisma";
 import { requireUser } from "../../server/auth";
-import { createDealInvitation } from "../../server/deal-invitations";
+import { createDealInvitation } from "../../server/counterparty";
 import { acknowledgeEvidenceAuthority } from "../../server/evidence-authority";
 import {
   confirmCommercialAction,

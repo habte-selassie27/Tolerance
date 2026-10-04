@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createAuthorizationGuards } from "../src/server/authorization";
+import { createAuthorizationGuards } from "../src/server/auth";
 import {
   assertInvitationAcceptance,
   hashInvitationToken,
-} from "../src/server/deal-invitations";
+} from "../src/server/counterparty";
 import {
   assertWalletChallenge,
   WalletOwnershipError,
-} from "../src/server/wallet-ownership";
+} from "../src/server/counterparty";
 import {
   lifecycleActionMatrix,
   validateCommercialTransactionBinding,

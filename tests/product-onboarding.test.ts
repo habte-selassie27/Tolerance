@@ -43,7 +43,7 @@ describe("product onboarding and public demo", () => {
   });
 
   it("keeps user wallets separate from the GenLayer worker identity", () => {
-    const wallet = readFileSync("src/server/wallet-ownership.ts", "utf8");
+    const wallet = readFileSync("src/server/counterparty.ts", "utf8");
     expect(wallet).toContain("recoverMessageAddress");
     expect(wallet).toContain(
       "This signature does not authorize a transaction or transfer funds.",

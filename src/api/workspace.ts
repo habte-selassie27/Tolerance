@@ -3,7 +3,7 @@ import "server-only";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 import { prisma } from "../lib/prisma";
-import { createServerSupabaseClient } from "../lib/supabase/server";
+import { createServerSupabaseClient } from "../lib/supabase";
 import { guards, requireUser } from "../server/auth";
 import { unauthorized } from "./errors";
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { prisma } from "../lib/prisma";
-import { createSupabaseAdminClient } from "../lib/supabase/admin";
+import { createSupabaseAdminClient } from "../lib/supabase";
 import { guards } from "./auth";
 import { EVIDENCE_BUCKET } from "./evidence-storage";
 import {

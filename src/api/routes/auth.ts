@@ -2,7 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { Router } from "express";
 
 import { validateSignupInput, validNewPassword } from "../../lib/auth-input";
-import { createServerSupabaseClient } from "../../lib/supabase/server";
+import { createServerSupabaseClient } from "../../lib/supabase";
 import { appOrigin, safeNextPath } from "../app";
 
 export const authRouter: Router = Router();

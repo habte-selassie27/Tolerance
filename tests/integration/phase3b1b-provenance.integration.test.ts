@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createSupabaseAdminClient } from "../../src/lib/supabase/admin";
+import { createSupabaseAdminClient } from "../../src/lib/supabase";
 import {
   attachRequirementSourceBlock,
   createRequirement,

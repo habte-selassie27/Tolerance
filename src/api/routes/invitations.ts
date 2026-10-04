@@ -2,11 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { prisma } from "../../lib/prisma";
-import { createServerSupabaseClient } from "../../lib/supabase/server";
+import { createServerSupabaseClient } from "../../lib/supabase";
 import {
   acceptDealInvitation,
   inspectDealInvitation,
-} from "../../server/deal-invitations";
+} from "../../server/counterparty";
 import { ApiError, routeParam } from "../errors";
 
 export const invitationsRouter: Router = Router();

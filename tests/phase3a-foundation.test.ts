@@ -6,11 +6,11 @@ import { assertAgreementIsMutable } from "../src/server/agreements";
 import {
   AuthorizationError,
   createAuthorizationGuards,
-} from "../src/server/authorization";
+} from "../src/server/auth";
 import {
   createOpaqueStorageKey,
   validateUploadBytes,
-} from "../src/server/validation";
+} from "../src/server/auth";
 
 const dealId = "dfb4b6a3-9466-46bd-ae56-5d32b21d08a1";
 

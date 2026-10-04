@@ -73,7 +73,7 @@ describe("layer boundaries", () => {
   });
 
   it("resolves the Supabase session from the ambient request context", () => {
-    const supabase = readFileSync("src/lib/supabase/server.ts", "utf8");
+    const supabase = readFileSync("src/lib/supabase.ts", "utf8");
     expect(supabase).toContain("currentRequestContext");
     expect(supabase).not.toContain("next/headers");
   });
